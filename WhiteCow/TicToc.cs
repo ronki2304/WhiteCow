@@ -4,7 +4,8 @@ using System.IO;
 using System.ServiceProcess;
 using System.Threading;
 using WhiteCow.Broker;
-
+ 
+//miaou
 namespace WhiteCow
 {
     public class TicToc : ServiceBase
