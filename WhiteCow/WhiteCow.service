@@ -1,0 +1,14 @@
+[Unit]
+Description=Test service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/mono-service /usr/Crypto/WhiteCow/WhiteCow.exe -l:/tmp/WhiteCow.lock --debug
+WorkingDirectory=/usr/Crypto/WhiteCow             
+RestartSec=10
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
