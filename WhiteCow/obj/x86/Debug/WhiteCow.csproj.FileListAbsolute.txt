@@ -1,9 +1,0 @@
-/home/jeremy/Projects/WhiteCow/WhiteCow/bin/Debug/WhiteCow.exe.config
-/home/jeremy/Projects/WhiteCow/WhiteCow/bin/Debug/WhiteCow.exe
-/home/jeremy/Projects/WhiteCow/WhiteCow/bin/Debug/WhiteCow.pdb
-/home/jeremy/Projects/WhiteCow/WhiteCow/bin/Debug/Newtonsoft.Json.dll
-/home/jeremy/Projects/WhiteCow/WhiteCow/bin/Debug/Newtonsoft.Json.xml
-/home/jeremy/Projects/WhiteCow/WhiteCow/obj/x86/Debug/WhiteCow.csproj.CoreCompileInputs.cache
-/home/jeremy/Projects/WhiteCow/WhiteCow/obj/x86/Debug/WhiteCow.exe
-/home/jeremy/Projects/WhiteCow/WhiteCow/obj/x86/Debug/WhiteCow.pdb
-/home/jeremy/Projects/WhiteCow/WhiteCow/obj/x86/Debug/WhiteCow.csprojResolveAssemblyReference.cache
