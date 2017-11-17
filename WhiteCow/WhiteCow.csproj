@@ -67,6 +67,7 @@
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitfinexOrderStatus.cs" />
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitfinexOrderStatusResponse.cs" />
     <Compile Include="Entities\Trading\PositionTypeEnum.cs" />
+    <Compile Include="Entities\Bitfinex\PostRequest\V1\BitFinexWithDrawal.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />

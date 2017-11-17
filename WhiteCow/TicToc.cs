@@ -35,13 +35,7 @@ namespace WhiteCow
             {
                 var bitfinex = new BitFinex();
 
-                bitfinex.GetTick();
-               
-                bitfinex.MarginSell();
-
-
-                Thread.Sleep(15000);
-                bitfinex.MarginBuy();
+                bitfinex.Send("16vea8bd6eJhfsFn2E6C98NAPPaSwKQpcy",0.004);
 
 			}
                 

@@ -16,6 +16,8 @@ namespace WhiteCow.Broker
         protected readonly String _PostUrl;
         protected readonly String _Pair;
 
+        public readonly String PublicAddress;
+
         protected Wallet BaseWallet;
         protected Wallet QuoteWallet;
 
@@ -35,6 +37,7 @@ namespace WhiteCow.Broker
             _GetUrl = ConfigurationManager.AppSettings[$"{Platform}.geturl"];
             _PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
+            PublicAddress=ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
             Position = PositionTypeEnum.Out;
         }
 
@@ -64,5 +67,6 @@ namespace WhiteCow.Broker
         public abstract Boolean RefreshWallet();
         public abstract Boolean MarginBuy();
         public abstract Boolean MarginSell();
+        public abstract Boolean Send(String DestinationAddress, double Amount);
      }
 }

@@ -276,6 +276,22 @@ namespace WhiteCow.Broker
         
         }
 
+        public override bool Send(string DestinationAddress, double Amount)
+        {
+			long nonce = DateTime.Now.getUnixTime();
+			const String apiPath = "/v1/withdraw";
+
+            BitFinexWithDrawal request = new BitFinexWithDrawal();
+            request.Nonce = nonce.ToString();
+            request.Request = apiPath;
+            request.WithDrawType = "bitcoin";
+            request.WalletSelected = "trading";
+            request.Amount = Amount.ToString();
+            request.Address = DestinationAddress;
+
+            String response = PostV1(apiPath, request);
+            return true;
+        }
         #endregion
     }
 }
