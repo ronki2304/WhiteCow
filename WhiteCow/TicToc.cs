@@ -34,22 +34,20 @@ namespace WhiteCow
             else
             {
                 var bitfinex = new BitFinex();
-
-                bitfinex.Send("16vea8bd6eJhfsFn2E6C98NAPPaSwKQpcy",0.004);
-
 			}
                 
         }
 		void HandleTimerCallback(object state)
 		{
             BitFinex btf = new BitFinex();
+            Poloniex polo = new Poloniex();
             String bitfinextick, cextick, polotick;
             try
             {
                 var btfTicker = btf.GetTick();
                 bitfinextick = btfTicker.Last.ToString();
             }
-            catch (Exception ex)
+            catch 
             { bitfinextick = String.Empty; }
 
             try
@@ -57,15 +55,15 @@ namespace WhiteCow
                 var cexTicker = CexIO.GetTick(ConfigurationManager.AppSettings["Cex.io.Pair"]);
                 cextick = cexTicker.Last.ToString();
             }
-            catch (Exception ex)
+            catch 
             { cextick = String.Empty; }
            
             try
             {
-                var PoloTicker = Poloniex.GetTick(ConfigurationManager.AppSettings["Poloniex.Pair"]);
+                var PoloTicker = polo.GetTick();
                 polotick = PoloTicker.Last.ToString();
             }
-            catch (Exception ex)
+            catch 
             { polotick = String.Empty; } 
 
             String content = $"{DateTime.Now.ToString()};{bitfinextick};{cextick};{polotick}";

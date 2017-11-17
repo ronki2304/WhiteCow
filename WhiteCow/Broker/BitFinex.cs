@@ -7,7 +7,7 @@ using WhiteCow.Entities;
 using WhiteCow.Extension;
 using System.Linq;
 using WhiteCow.Entities.Bitfinex.PostRequest.V1;
-
+using System.Diagnostics;
 
 namespace WhiteCow.Broker
 {
@@ -17,12 +17,62 @@ namespace WhiteCow.Broker
 
         public BitFinex() : base(Plateform.BitFinex.ToString())
         {
+          
             QuoteWallet = new Wallet { currency = _Pair.Substring(0, 3) };
             BaseWallet = new Wallet { currency = _Pair.Substring(3, 3) };
             RefreshWallet();
 
         }
         #region private 
+        private String PostV1(string apiPath, BitfinexPostBase request)
+        {
+            String body64 = Base64Encode(request.serialize());
+            String address = _PostUrl + apiPath;
+            WebClient client = new WebClient();
+            client.Headers["X-BFX-APIKEY"] = _Key;
+            client.Headers["X-BFX-PAYLOAD"] = body64;
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            client.Headers["X-BFX-SIGNATURE"] = EncryptPost(body64, new HMACSHA384());
+            String response = client.UploadString(address, request.serialize());
+            Debug.WriteLine(response);
+            return response;
+
+        }
+        private String PostV2(string apiPath, String body, long nonce)
+        {
+            String address = _PostUrl + apiPath;
+
+            WebClient client = new WebClient();
+
+            client.Headers["bfx-apikey"] = _Key;
+            client.Headers["bfx-nonce"] = nonce.ToString();
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            client.Headers["bfx-signature"] = EncryptPost($"/api{apiPath}{nonce}{body}", new HMACSHA384());
+
+            Int16 PostTry = 0;
+            String output = String.Empty;
+            while (PostTry < 3)
+            {
+                try
+                {
+                    output = client.UploadString(address, body);
+                    break;
+
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("refresh Wallet post exception occured :");
+                    Console.WriteLine(ex.ToString());
+                    if (PostTry >= 3)
+                        return "error";
+                    PostTry++;
+
+                }
+            }
+            
+            Console.WriteLine(output);
+            return output;
+        }
         #endregion
 
         #region http get
@@ -61,36 +111,8 @@ namespace WhiteCow.Broker
 
             const String apiPath = "/v2/auth/r/wallets";
             const String body = "{}";
-            String address = _PostUrl + apiPath;
+            String output = PostV2(apiPath, body, DateTime.Now.getUnixTime());
 
-            WebClient client = new WebClient();
-            var nonce = DateTime.Now.getUnixTime();
-            client.Headers["bfx-apikey"] = _Key;
-            client.Headers["bfx-nonce"] = nonce.ToString();
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-			client.Headers["bfx-signature"] =EncryptPost($"/api{apiPath}{nonce}{body}", new HMACSHA384());
-
-            Int16 PostTry = 0;
-            String output = String.Empty;
-            while (PostTry < 3)
-            {
-                try
-                {
-                    output = client.UploadString(address, body);
-                    break;
-
-                }
-                catch (Exception ex)
-                {
-                    PostTry++;
-                    Console.WriteLine("refresh Wallet post exception occured :");
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-            //if post not completed
-            if (PostTry >= 3)
-                return false;
-            //remove the first [ and the last ]
             output = output.Substring(1, output.Length - 2);
 
             //split by array
@@ -122,44 +144,15 @@ namespace WhiteCow.Broker
             return true;
         }
 
-        public Boolean OpenPosition()
+        public String ListOpenPositions()
         {
 
             const String apiPath = "/v2/auth/r/positions";
-            const String body = "{}";
-            String address = _PostUrl + apiPath;
-
-            WebClient client = new WebClient();
             var nonce = DateTime.Now.getUnixTime();
-            client.Headers["bfx-apikey"] = _Key;
-            client.Headers["bfx-nonce"] = nonce.ToString();
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers["bfx-signature"] = EncryptPost($"/api{apiPath}{nonce}{body}", new HMACSHA384());
+            const String body = "{}";
+            String res = PostV2(apiPath, body, nonce);
+            return res;
 
-            Int16 PostTry = 0;
-            String output = String.Empty;
-            while (PostTry < 3)
-            {
-                try
-                {
-                    output = client.UploadString(address, body);
-                    break;
-
-                }
-                catch (Exception ex)
-                {
-                    PostTry++;
-                    Console.WriteLine("refresh Wallet post exception occured :");
-                    Console.WriteLine(ex.ToString());
-                }
-            }
-
-            Console.WriteLine(output);
-            //if post not completed
-            if (PostTry >= 3)
-                return false;
-
-            return true;
         }
 
         public bool Account_info()
@@ -169,30 +162,21 @@ namespace WhiteCow.Broker
             BitfinexPostBase request = new BitfinexPostBase();
             request.Request = apiPath;
             request.Nonce = nonce.ToString();
-            String body64 = Base64Encode(request.serialize());
-			String address = _PostUrl + apiPath;
 
-            WebClient client = new WebClient();
-			client.Headers["X-BFX-APIKEY"] = _Key;
-            client.Headers["X-BFX-PAYLOAD"] = body64;
-			client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers["X-BFX-SIGNATURE"] =EncryptPost(body64, new HMACSHA384());
-            Console.WriteLine(client.UploadString(address,request.serialize()));
+            Console.WriteLine(PostV1(apiPath, request));
 
             return true;
         }
-
-	
 
 
         public override bool MarginBuy()
         {
             long nonce = DateTime.Now.getUnixTime();
-			const String apiPath = "/v1/order/new";
-			
+            const String apiPath = "/v1/order/new";
+
             BitfinexNewOrder request = new BitfinexNewOrder();
-			request.Request = apiPath;
-			request.Nonce = nonce.ToString();
+            request.Request = apiPath;
+            request.Nonce = nonce.ToString();
             request.Symbol = _Pair.ToLower();
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
@@ -204,27 +188,34 @@ namespace WhiteCow.Broker
                 request.Amount = QuoteAmount.ToString();
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
-			
+
             request.Price = Last.ToString();
             request.Side = "buy";
             request.Type = "market";
             request.use_all_available = "1";
+            try
+            {
+                BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
+                QuoteAmount = Convert.ToDouble(response.OriginalAmount);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return false;
+            }
 
-            BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
-            QuoteAmount = Convert.ToDouble(response.OriginalAmount);
-            
-            return true;
         }
 
-		public override Boolean MarginSell()
-		{
-			long nonce = DateTime.Now.getUnixTime();
-			const String apiPath = "/v1/order/new";
+        public override Boolean MarginSell()
+        {
+            long nonce = DateTime.Now.getUnixTime();
+            const String apiPath = "/v1/order/new";
 
-			BitfinexNewOrder request = new BitfinexNewOrder();
-			request.Request = apiPath;
-			request.Nonce = nonce.ToString();
-			request.Symbol = _Pair.ToLower();
+            BitfinexNewOrder request = new BitfinexNewOrder();
+            request.Request = apiPath;
+            request.Nonce = nonce.ToString();
+            request.Symbol = _Pair.ToLower();
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
@@ -236,16 +227,24 @@ namespace WhiteCow.Broker
                 request.Amount = QuoteAmount.ToString();
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
-			request.Price = Last.ToString();
-			request.Side = "sell";
-			request.Type = "market";
-			request.use_all_available = "1";
+            request.Price = Last.ToString();
+            request.Side = "sell";
+            request.Type = "market";
+            request.use_all_available = "1";
 
-			BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
-			QuoteAmount = Convert.ToDouble(response.OriginalAmount);
-             
-            return true;
-		}
+            try
+            {
+                BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
+                QuoteAmount = Convert.ToDouble(response.OriginalAmount);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return false;
+            }
+        }
 
         public Boolean CancelOrder(Int64 orderId)
         {
@@ -256,30 +255,23 @@ namespace WhiteCow.Broker
             request.Request = apiPath;
             request.Nonce = nonce.ToString();
             request.OrderId = orderId;
-
-            PostV1(apiPath, request);
-            return true;
+            try
+            {
+                PostV1(apiPath, request);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return false;
+            }
         }
 
-        private String PostV1(string apiPath, BitfinexPostBase request)
-        {
-            String body64 = Base64Encode(request.serialize());
-            String address = _PostUrl + apiPath;
-            WebClient client = new WebClient();
-            client.Headers["X-BFX-APIKEY"] = _Key;
-            client.Headers["X-BFX-PAYLOAD"] = body64;
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers["X-BFX-SIGNATURE"] = EncryptPost(body64, new HMACSHA384());
-            String response = client.UploadString(address, request.serialize());
-            Console.WriteLine(response);
-            return response;
-        
-        }
 
         public override bool Send(string DestinationAddress, double Amount)
         {
-			long nonce = DateTime.Now.getUnixTime();
-			const String apiPath = "/v1/withdraw";
+            long nonce = DateTime.Now.getUnixTime();
+            const String apiPath = "/v1/withdraw";
 
             BitFinexWithDrawal request = new BitFinexWithDrawal();
             request.Nonce = nonce.ToString();
@@ -288,9 +280,16 @@ namespace WhiteCow.Broker
             request.WalletSelected = "trading";
             request.Amount = Amount.ToString();
             request.Address = DestinationAddress;
-
-            String response = PostV1(apiPath, request);
-            return true;
+            try
+            {
+                String response = PostV1(apiPath, request);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                return false;
+            }
         }
         #endregion
     }

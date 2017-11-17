@@ -6,40 +6,53 @@ using WhiteCow.Entities.Poloniex.Ticker;
 
 namespace WhiteCow.Broker
 {
-    public static class Poloniex
+    public class Poloniex : Broker
     {
-        static readonly String _Key;
-        static readonly String _Secret;
-        static readonly String _Url;
-        static Poloniex()
+        public Poloniex() : base(Plateform.Poloniex.ToString())
         {
-            _Key = ConfigurationManager.AppSettings["Poloniex.key"];
-            _Secret = ConfigurationManager.AppSettings["Poloniex.secret"];
-            _Url = ConfigurationManager.AppSettings["Poloniex.url"];
         }
 
         #region http get
-        public static Ticker GetTick(String Pair)
+        public override Ticker GetTick()
         {
-            System.Security.Cryptography.AesCryptoServiceProvider b = new System.Security.Cryptography.AesCryptoServiceProvider();
-            System.Net.ServicePointManager.ServerCertificateValidationCallback += (o, certificate, chain, errors) => true;
-
-            String address = _Url + "/public?command=returnTicker";
+           String address = _GetUrl + "/public?command=returnTicker";
             WebClient client = new WebClient();
 
 
             var poloticker = PoloniexTicker.FromJson(client.DownloadString(address));
 
             Ticker otick = new Ticker();
-            otick.Ask = poloticker[Pair].LowestAsk;
-            otick.Bid = poloticker[Pair].HighestBid;
-            otick.Last = poloticker[Pair].Last;
-            otick.Low = poloticker[Pair].Low24hr;
-            otick.High = poloticker[Pair].High24hr;
-            otick.Volume = poloticker[Pair].BaseVolume;
+            otick.Ask = poloticker[_Pair].LowestAsk;
+            otick.Bid = poloticker[_Pair].HighestBid;
+            otick.Last = poloticker[_Pair].Last;
+            otick.Low = poloticker[_Pair].Low24hr;
+            otick.High = poloticker[_Pair].High24hr;
+            otick.Volume = poloticker[_Pair].BaseVolume;
 
             return otick;
 
+        }
+
+      
+
+        public override bool MarginBuy()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool MarginSell()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool RefreshWallet()
+        {
+            throw new NotImplementedException();
+        }
+
+        public override bool Send(string DestinationAddress, double Amount)
+        {
+            throw new NotImplementedException();
         }
         #endregion
 

@@ -16,7 +16,7 @@ namespace WhiteCow.Broker
         protected readonly String _PostUrl;
         protected readonly String _Pair;
 
-        public readonly String PublicAddress;
+        public readonly String _PublicAddress;
 
         protected Wallet BaseWallet;
         protected Wallet QuoteWallet;
@@ -37,14 +37,14 @@ namespace WhiteCow.Broker
             _GetUrl = ConfigurationManager.AppSettings[$"{Platform}.geturl"];
             _PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
-            PublicAddress=ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
+            _PublicAddress=ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
             Position = PositionTypeEnum.Out;
         }
 
 		protected string Base64Encode(string plainText)
 		{
             var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
-			return System.Convert.ToBase64String(plainTextBytes);
+			return Convert.ToBase64String(plainTextBytes);
 		}
 
 		protected String EncryptPost(string PostData, HMAC hm)
@@ -61,6 +61,15 @@ namespace WhiteCow.Broker
                 hm.Dispose();
             }
 		}
+
+        protected void UpdateMarketPosition(PositionTypeEnum pos)
+        {
+            if (Position == PositionTypeEnum.Out)
+                Position = pos;
+            else
+                Position = PositionTypeEnum.Out;
+            
+        }
 
         public abstract Ticker GetTick();
       
