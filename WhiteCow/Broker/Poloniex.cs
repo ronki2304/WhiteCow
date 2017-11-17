@@ -12,10 +12,13 @@ namespace WhiteCow.Broker
         {
         }
 
+        #region private
+        #endregion
+
         #region http get
         public override Ticker GetTick()
         {
-           String address = _GetUrl + "/public?command=returnTicker";
+            String address = _GetUrl + "/public?command=returnTicker";
             WebClient client = new WebClient();
 
 
@@ -32,9 +35,10 @@ namespace WhiteCow.Broker
             return otick;
 
         }
+        #endregion
 
-      
 
+        #region http post
         public override bool MarginBuy()
         {
             throw new NotImplementedException();

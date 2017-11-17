@@ -20,7 +20,7 @@ namespace WhiteCow.Broker
           
             QuoteWallet = new Wallet { currency = _Pair.Substring(0, 3) };
             BaseWallet = new Wallet { currency = _Pair.Substring(3, 3) };
-            RefreshWallet();
+			RefreshWallet();
 
         }
         #region private 

@@ -39,6 +39,7 @@ namespace WhiteCow.Broker
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
             _PublicAddress=ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
             Position = PositionTypeEnum.Out;
+
         }
 
 		protected string Base64Encode(string plainText)
