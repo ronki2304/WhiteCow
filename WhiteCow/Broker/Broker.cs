@@ -4,6 +4,7 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using WhiteCow.Entities;
+using WhiteCow.Entities.Trading;
 
 namespace WhiteCow.Broker
 {
@@ -19,7 +20,14 @@ namespace WhiteCow.Broker
         protected Wallet QuoteWallet;
 
         public Double Last { get; protected set; }
-      
+        public PositionTypeEnum Position { get; protected set; }
+
+		/// <summary>
+		/// store the amount of the currency bought or sold
+		/// </summary>
+		/// <value>The quote currency quantity.</value>
+		public Double QuoteAmount { get; protected set; } 
+
         public Broker(String Platform)
         {
             _Key = ConfigurationManager.AppSettings[$"{Platform}.key"];
@@ -27,6 +35,7 @@ namespace WhiteCow.Broker
             _GetUrl = ConfigurationManager.AppSettings[$"{Platform}.geturl"];
             _PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
+            Position = PositionTypeEnum.Out;
         }
 
 		protected string Base64Encode(string plainText)

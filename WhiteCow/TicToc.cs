@@ -36,8 +36,12 @@ namespace WhiteCow
                 var bitfinex = new BitFinex();
                 bitfinex.GetTick();
                 bitfinex.MarginBuy();
+                Thread.Sleep(60000);
+				bitfinex.GetTick();
+                bitfinex.MarginSell();
 
-            }
+
+			}
                 
         }
 		void HandleTimerCallback(object state)

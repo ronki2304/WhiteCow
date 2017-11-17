@@ -88,7 +88,7 @@ namespace WhiteCow.Broker
                 }
             }
             //if post not completed
-            if (PostTry > 3)
+            if (PostTry >= 3)
                 return false;
             //remove the first [ and the last ]
             output = output.Substring(1, output.Length - 2);
@@ -151,7 +151,10 @@ namespace WhiteCow.Broker
 			request.Request = apiPath;
 			request.Nonce = nonce.ToString();
             request.Symbol = _Pair.ToLower();
-            request.Amount = (BaseWallet.amount / Last).ToString();
+			if (Position == Entities.Trading.PositionTypeEnum.Out)
+				request.Amount = (BaseWallet.amount / Last).ToString();
+			else
+				request.Amount = QuoteAmount.ToString();
             request.Price = Last.ToString();
             request.Side = "buy";
             request.Type = "market";
@@ -170,7 +173,11 @@ namespace WhiteCow.Broker
 			request.Request = apiPath;
 			request.Nonce = nonce.ToString();
 			request.Symbol = _Pair.ToLower();
-			request.Amount = (BaseWallet.amount / Last).ToString();
+
+            if (Position == Entities.Trading.PositionTypeEnum.Out)
+                request.Amount = (BaseWallet.amount / Last).ToString();
+            else
+                request.Amount = QuoteAmount.ToString();
 			request.Price = Last.ToString();
 			request.Side = "sell";
 			request.Type = "market";
