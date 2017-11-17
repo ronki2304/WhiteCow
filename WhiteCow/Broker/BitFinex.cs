@@ -122,6 +122,46 @@ namespace WhiteCow.Broker
             return true;
         }
 
+        public Boolean OpenPosition()
+        {
+
+            const String apiPath = "/v2/auth/r/positions";
+            const String body = "{}";
+            String address = _PostUrl + apiPath;
+
+            WebClient client = new WebClient();
+            var nonce = DateTime.Now.getUnixTime();
+            client.Headers["bfx-apikey"] = _Key;
+            client.Headers["bfx-nonce"] = nonce.ToString();
+            client.Headers[HttpRequestHeader.ContentType] = "application/json";
+            client.Headers["bfx-signature"] = EncryptPost($"/api{apiPath}{nonce}{body}", new HMACSHA384());
+
+            Int16 PostTry = 0;
+            String output = String.Empty;
+            while (PostTry < 3)
+            {
+                try
+                {
+                    output = client.UploadString(address, body);
+                    break;
+
+                }
+                catch (Exception ex)
+                {
+                    PostTry++;
+                    Console.WriteLine("refresh Wallet post exception occured :");
+                    Console.WriteLine(ex.ToString());
+                }
+            }
+
+            Console.WriteLine(output);
+            //if post not completed
+            if (PostTry >= 3)
+                return false;
+
+            return true;
+        }
+
         public bool Account_info()
         {
             long nonce = DateTime.Now.getUnixTime();
@@ -142,6 +182,9 @@ namespace WhiteCow.Broker
             return true;
         }
 
+	
+
+
         public override bool MarginBuy()
         {
             long nonce = DateTime.Now.getUnixTime();
@@ -151,16 +194,25 @@ namespace WhiteCow.Broker
 			request.Request = apiPath;
 			request.Nonce = nonce.ToString();
             request.Symbol = _Pair.ToLower();
-			if (Position == Entities.Trading.PositionTypeEnum.Out)
-				request.Amount = (BaseWallet.amount / Last).ToString();
-			else
-				request.Amount = QuoteAmount.ToString();
+            if (Position == Entities.Trading.PositionTypeEnum.Out)
+            {
+                request.Amount = (BaseWallet.amount / Last).ToString();
+                Position = Entities.Trading.PositionTypeEnum.Long;
+            }
+            else
+            {
+                request.Amount = QuoteAmount.ToString();
+                Position = Entities.Trading.PositionTypeEnum.Out;
+            }
+			
             request.Price = Last.ToString();
             request.Side = "buy";
             request.Type = "market";
             request.use_all_available = "1";
 
-            PostV1(apiPath, request);
+            BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
+            QuoteAmount = Convert.ToDouble(response.OriginalAmount);
+            
             return true;
         }
 
@@ -175,15 +227,22 @@ namespace WhiteCow.Broker
 			request.Symbol = _Pair.ToLower();
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
+            {
                 request.Amount = (BaseWallet.amount / Last).ToString();
+                Position = Entities.Trading.PositionTypeEnum.Short;
+            }
             else
+            {
                 request.Amount = QuoteAmount.ToString();
+                Position = Entities.Trading.PositionTypeEnum.Out;
+            }
 			request.Price = Last.ToString();
 			request.Side = "sell";
 			request.Type = "market";
 			request.use_all_available = "1";
 
-            PostV1(apiPath,request);
+			BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
+			QuoteAmount = Convert.ToDouble(response.OriginalAmount);
              
             return true;
 		}
