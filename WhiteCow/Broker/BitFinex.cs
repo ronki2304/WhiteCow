@@ -155,6 +155,17 @@ namespace WhiteCow.Broker
 
         }
 
+        protected override Double GetAverageYieldLoan()
+		{
+
+			const String apiPath = "/v2/auth/r/info/funding/";
+			var nonce = DateTime.Now.getUnixTime();
+			const String body = "{}";
+            String res = PostV2(apiPath+"f"+BaseWallet.currency, body, nonce);
+
+            return Convert.ToDouble(res.Split(',')[3]);
+		}
+
         public bool Account_info()
         {
             long nonce = DateTime.Now.getUnixTime();

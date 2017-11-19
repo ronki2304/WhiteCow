@@ -34,6 +34,8 @@ namespace WhiteCow
             else
             {
                 var bitfinex = new BitFinex();
+                Console.WriteLine(bitfinex.AverageYieldLoan);
+
 			}
                 
         }
