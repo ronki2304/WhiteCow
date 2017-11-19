@@ -65,7 +65,7 @@ namespace WhiteCow.Broker
         }
         #endregion
 
-    }
+    } 
 
 	
 }
