@@ -23,7 +23,7 @@ namespace WhiteCow.Broker
 
         public Double Last { get; protected set; }
         public PositionTypeEnum Position { get; protected set; }
-
+        public Boolean IsInError;
         /// <summary>
         /// return an avarage rate lend
         /// </summary>
@@ -50,7 +50,7 @@ namespace WhiteCow.Broker
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
             _PublicAddress = ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
             Position = PositionTypeEnum.Out;
-
+            IsInError = false;
         }
 
         protected string Base64Encode(string plainText)

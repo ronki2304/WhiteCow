@@ -8,6 +8,7 @@ using WhiteCow.Extension;
 using System.Linq;
 using WhiteCow.Entities.Bitfinex.PostRequest.V1;
 using System.Diagnostics;
+using System.Threading;
 
 namespace WhiteCow.Broker
 {
@@ -17,15 +18,16 @@ namespace WhiteCow.Broker
 
         public BitFinex() : base(Plateform.BitFinex.ToString())
         {
-          
+
             QuoteWallet = new Wallet { currency = _Pair.Substring(0, 3) };
             BaseWallet = new Wallet { currency = _Pair.Substring(3, 3) };
-			RefreshWallet();
+            RefreshWallet();
 
         }
         #region private 
         private String PostV1(string apiPath, BitfinexPostBase request)
         {
+
             String body64 = Base64Encode(request.serialize());
             String address = _PostUrl + apiPath;
             WebClient client = new WebClient();
@@ -33,9 +35,30 @@ namespace WhiteCow.Broker
             client.Headers["X-BFX-PAYLOAD"] = body64;
             client.Headers[HttpRequestHeader.ContentType] = "application/json";
             client.Headers["X-BFX-SIGNATURE"] = EncryptPost(body64, new HMACSHA384());
-            String response = client.UploadString(address, request.serialize());
-            Debug.WriteLine(response);
-            return response;
+
+            Int16 PostTry = 0;
+            while (PostTry < 3)
+            {
+                try
+                {
+                    String response = client.UploadString(address, request.serialize());
+                    return response;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Post V1 exception occured :");
+                    Console.WriteLine(ex.ToString());
+                    if (PostTry >= 3)
+                    {
+                        IsInError = true;
+                        return "error";
+                    }
+                    PostTry++;
+                    //wait 5 secondes before retrying
+                    Thread.Sleep(5000);
+                }
+            }
+            return String.Empty;
 
         }
         private String PostV2(string apiPath, String body, long nonce)
@@ -61,15 +84,19 @@ namespace WhiteCow.Broker
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("refresh Wallet post exception occured :");
+                    Console.WriteLine("Post V2 exception occured :");
                     Console.WriteLine(ex.ToString());
                     if (PostTry >= 3)
+                    {
+                        IsInError = true;
                         return "error";
+                    }
                     PostTry++;
-
+                    //wait 5 secondes before retrying
+                    Thread.Sleep(5000);
                 }
             }
-            
+
             Console.WriteLine(output);
             return output;
         }
@@ -113,6 +140,9 @@ namespace WhiteCow.Broker
             const String body = "{}";
             String output = PostV2(apiPath, body, DateTime.Now.getUnixTime());
 
+            //call post failed three times then stop process
+            if (IsInError)
+                return false;
             output = output.Substring(1, output.Length - 2);
 
             //split by array
@@ -141,6 +171,7 @@ namespace WhiteCow.Broker
             else
                 QuoteWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
             Console.WriteLine($"Quote wallet new amount : {QuoteWallet.amount}");
+            IsInError = false;
             return true;
         }
 
@@ -151,20 +182,29 @@ namespace WhiteCow.Broker
             var nonce = DateTime.Now.getUnixTime();
             const String body = "{}";
             String res = PostV2(apiPath, body, nonce);
+
+            //call post failed three times then stop process
+            if (IsInError)
+                return String.Empty;
+            IsInError = false;
             return res;
 
         }
 
         protected override Double GetAverageYieldLoan()
-		{
+        {
 
-			const String apiPath = "/v2/auth/r/info/funding/";
-			var nonce = DateTime.Now.getUnixTime();
-			const String body = "{}";
-            String res = PostV2(apiPath+"f"+BaseWallet.currency, body, nonce);
+            const String apiPath = "/v2/auth/r/info/funding/";
+            var nonce = DateTime.Now.getUnixTime();
+            const String body = "{}";
+            String res = PostV2(apiPath + "f" + BaseWallet.currency, body, nonce);
 
+            //call post failed three times then stop process
+            if (IsInError)
+                return Double.NaN;
+            IsInError = false;
             return Convert.ToDouble(res.Split(',')[3]);
-		}
+        }
 
         public bool Account_info()
         {
@@ -175,6 +215,11 @@ namespace WhiteCow.Broker
             request.Nonce = nonce.ToString();
 
             Console.WriteLine(PostV1(apiPath, request));
+
+            //call post failed three times then stop process
+            if (IsInError)
+                return false;
+            IsInError = false;
 
             return true;
         }
@@ -207,12 +252,18 @@ namespace WhiteCow.Broker
             try
             {
                 BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
+                //call post failed three times then stop process
+                if (IsInError)
+                    return false;
+                IsInError = false;
+
                 QuoteAmount = Convert.ToDouble(response.OriginalAmount);
                 return true;
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+                IsInError = true;
                 return false;
             }
 
@@ -246,6 +297,11 @@ namespace WhiteCow.Broker
             try
             {
                 BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
+                //call post failed three times then stop process
+                if (IsInError)
+                    return false;
+                IsInError = false;
+
                 QuoteAmount = Convert.ToDouble(response.OriginalAmount);
 
                 return true;
@@ -253,6 +309,7 @@ namespace WhiteCow.Broker
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+                IsInError = true;
                 return false;
             }
         }
@@ -291,16 +348,16 @@ namespace WhiteCow.Broker
             request.WalletSelected = "trading";
             request.Amount = Amount.ToString();
             request.Address = DestinationAddress;
-            try
-            {
-                String response = PostV1(apiPath, request);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.ToString());
+
+            String response = PostV1(apiPath, request);
+
+            //call post failed three times then stop process
+            if (IsInError)
                 return false;
-            }
+            IsInError = false;
+
+            return true;
+
         }
         #endregion
     }

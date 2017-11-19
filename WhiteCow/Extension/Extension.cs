@@ -7,5 +7,10 @@ namespace WhiteCow.Extension
 		{
 			return (Int64)(dt - new DateTime(1970, 1, 1)).TotalSeconds;
 		}
+
+		public static Int64 getUnixMilliTime(this DateTime dt)
+		{
+			return (Int64)(dt - new DateTime(1970, 1, 1)).TotalMilliseconds;
+		}
     }
 }
