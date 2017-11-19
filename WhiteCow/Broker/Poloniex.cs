@@ -58,6 +58,11 @@ namespace WhiteCow.Broker
         {
             throw new NotImplementedException();
         }
+
+        protected override double GetAverageYieldLoan()
+        {
+            throw new NotImplementedException();
+        }
         #endregion
 
     }
