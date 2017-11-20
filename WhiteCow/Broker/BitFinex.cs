@@ -123,7 +123,7 @@ namespace WhiteCow.Broker
             tick.Volume = Convert.ToDouble(listParam[7]);
             tick.Timestamp = DateTime.Now.getUnixTime();
 
-            Last = tick.Last;
+            LastTick = tick;
             return tick;
         }
         #endregion
@@ -236,7 +236,7 @@ namespace WhiteCow.Broker
             request.Symbol = _Pair.ToLower();
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (BaseWallet.amount / Last).ToString();
+                request.Amount = (BaseWallet.amount / LastTick.Last).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Long;
             }
             else
@@ -245,7 +245,7 @@ namespace WhiteCow.Broker
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
 
-            request.Price = Last.ToString();
+            request.Price = LastTick.Last.ToString();
             request.Side = "buy";
             request.Type = "market";
             request.use_all_available = "1";
@@ -281,7 +281,7 @@ namespace WhiteCow.Broker
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (BaseWallet.amount / Last).ToString();
+                request.Amount = (BaseWallet.amount / LastTick.Last).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Short;
             }
             else
@@ -289,7 +289,7 @@ namespace WhiteCow.Broker
                 request.Amount = QuoteAmount.ToString();
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
-            request.Price = Last.ToString();
+            request.Price = LastTick.Last.ToString();
             request.Side = "sell";
             request.Type = "market";
             request.use_all_available = "1";

@@ -20,8 +20,10 @@ namespace WhiteCow.Broker
 
         protected Wallet BaseWallet;
         protected Wallet QuoteWallet;
+        protected Ticker LastTick { get; set; }
 
-        public Double Last { get; protected set; }
+
+
         public PositionTypeEnum Position { get; protected set; }
         public Boolean IsInError;
         /// <summary>

@@ -9,22 +9,62 @@ using WhiteCow.Entities.Poloniex.Ticker;
 using WhiteCow.Extension;
 using System.Linq;
 using System.Threading;
+using WhiteCow.Entities.Poloniex;
+using System.Collections.Generic;
 
 namespace WhiteCow.Broker
 {
     public class Poloniex : Broker
     {
+		/// <summary>
+		/// poloniex doesn't permit to send directly money to margin part
+        /// all income come from exchange
+		/// </summary>
+        private Wallet ExchangeBaseWallet;
+        static SynchronizedCollection<DateTime> NbPostCall;
+
         public Poloniex() : base(Plateform.Poloniex.ToString())
         {
             QuoteWallet = new Wallet { currency = _Pair.Split('_')[1] };
 			BaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
+            ExchangeBaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
+            NbPostCall = new SynchronizedCollection<DateTime>();
             RefreshWallet();
+
         }
 
 		#region private
+        /// <summary>
+        /// this method check if we are under the 6 call per second autorized by poloniex
+        /// if yes the method return
+        /// if no the method wait for 1 second before return
+        /// </summary>
+        private static void AuthorizePost()
+        {
+            Boolean isOK = false;
 
+            while (!isOK)
+            {
+                for (int i = 0; i < NbPostCall.Count; i++)
+                {
+                    if (NbPostCall[i] < DateTime.Now.AddSeconds(-1))
+                        NbPostCall.RemoveAt(i);
+                }
+                if (NbPostCall.Count <= 6)
+                {
+                    isOK = true;
+                    NbPostCall.Add(DateTime.Now);
+                }
+                else
+                    Thread.Sleep(1000);
+            }
+        }
 		
-
+        /// <summary>
+        /// operate the post, and limit it to 6 per seconds
+        /// </summary>
+        /// <returns>The post.</returns>
+        /// <param name="PostData">Post data.</param>
         private String Post(String PostData)
         {
 			WebClient client = new WebClient();
@@ -37,6 +77,7 @@ namespace WhiteCow.Broker
 			{
                 try
                 {
+                    AuthorizePost();
                     String content = client.UploadString(_PostUrl, "POST", PostData);
                     Console.WriteLine(content);
                     return content;
@@ -58,6 +99,11 @@ namespace WhiteCow.Broker
 			return String.Empty;
 		}
 		
+        /// <summary>
+        /// Encrypts the post with poloniex pre requisite.
+        /// </summary>
+        /// <returns>The post.</returns>
+        /// <param name="PostData">Post data.</param>
 		private String EncryptPost(string PostData)
 		{
             var keyByte = Encoding.UTF8.GetBytes(_Secret);
@@ -70,6 +116,10 @@ namespace WhiteCow.Broker
         #endregion
 
         #region http get
+        /// <summary>
+        /// Gets the tick for a specified pair
+        /// </summary>
+        /// <returns>The tick.</returns>
         public override Ticker GetTick()
         {
             String address = _GetUrl + "/public?command=returnTicker";
@@ -89,13 +139,29 @@ namespace WhiteCow.Broker
             return otick;
 
         }
+        /// <summary>
+        /// compute the lending rate
+        /// </summary>
+        /// <returns>The average yield loan.</returns>
+		protected override double GetAverageYieldLoan()
+		{
+			String address = _GetUrl + $"/public?command=returnLoanOrders&currency={BaseWallet.currency}";
+			WebClient client = new WebClient();
+			var lend = PoloniexLendInfo.FromJson(client.DownloadString(address));
+			return lend.Offers.Average(p => p.Rate);
+		}
         #endregion
 
 
         #region http post
         public override bool MarginBuy()
         {
-            throw new NotImplementedException();
+            //maybe we have to remove  it
+            //because it make a double call to the same method in a quick interval
+            //or maybe it is usefull if we have latency
+            //I don't know
+            GetTick();
+            return true;
         }
 
         public override bool MarginSell()
@@ -103,30 +169,40 @@ namespace WhiteCow.Broker
             throw new NotImplementedException();
         }
 
+         
+
+        /// <summary>
+        /// Refreshs the amount wallet.
+        /// </summary>
+        /// <returns><c>true</c>, if wallet was refreshed, <c>false</c> error.</returns>
         public override bool RefreshWallet()
         {
-            String PostData = "command=returnBalances&nonce=" + DateTime.Now.getUnixMilliTime();
+            String PostData = "command=returnAvailableAccountBalances&nonce=" + DateTime.Now.getUnixMilliTime();
 
-			String content = Post(PostData);
+            var balances = PoloniexAvailableAccountBalance.FromJson(Post(PostData));
+           
 
             if (IsInError)
                 return false;
+
+
+            //spolit to retrieve the different balance
+            if (balances.margin!=null && balances.margin.ContainsKey(BaseWallet.currency))
+                BaseWallet.amount = Convert.ToDouble(balances.margin[BaseWallet.currency]);
+            else
+                BaseWallet.amount = 0.0;
+
+            if (balances.margin != null && balances.margin.ContainsKey(QuoteWallet.currency))
+                QuoteWallet.amount = Convert.ToDouble(balances.margin[QuoteWallet.currency]);
+            else
+                QuoteWallet.amount = 0.0;
+
+			if (balances.exchange != null && balances.exchange.ContainsKey(QuoteWallet.currency))
+				ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[QuoteWallet.currency]);
+			else
+				ExchangeBaseWallet.amount = 0.0;
             
-            //retrieve the right wallet
-            var allWallet = content.Split(',').ToList();
-
-            try
-            {
-                BaseWallet.amount = Convert.ToDouble(allWallet.First(p => p.Contains(BaseWallet.currency)).Split(':')[1].Replace('\"', '0'), CultureInfo.InvariantCulture);
-                QuoteWallet.amount = Convert.ToDouble(allWallet.First(p => p.Contains(QuoteWallet.currency)).Split(':')[1].Replace('\"', '0'), CultureInfo.InvariantCulture);
-                                                     
-            }
-            catch
-            {
-                return false;
-            }
-
-            Console.WriteLine($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Quote wallet amount {QuoteWallet.amount}");
+            Console.WriteLine($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Quote wallet amount {QuoteWallet.amount}{Environment.NewLine} Exchange base wallet : {ExchangeBaseWallet.amount}");
             return true;
 		}
 
@@ -135,9 +211,32 @@ namespace WhiteCow.Broker
             throw new NotImplementedException();
         }
 
-        protected override double GetAverageYieldLoan()
+        /// <summary>
+        /// permit to transfer fund between account
+        /// </summary>
+        /// <returns><c>true</c>, if fund was transfered, <c>false</c> otherwise.</returns>
+        /// <param name="Input">Input account</param>
+        /// <param name="Output">Output account</param>
+        /// <param name="amount">Amount</param>
+        private Boolean TransferFund(PoloniexAccountType Input, PoloniexAccountType Output, Double amount)
         {
-            throw new NotImplementedException();
+            String PostData = String.Concat("command=transferBalance&nonce="
+                                            , DateTime.Now.getUnixMilliTime()
+                                            , "&currency="
+                                            , BaseWallet.currency
+                                            , "&amount="
+                                            , amount.ToString()
+                                            , "&fromAccount="
+                                            , Input.ToString()
+                                            , "&toAccount="
+                                            , Output.ToString()
+                                           );
+
+            String res  =Post(PostData);
+            if (IsInError)
+                return false;
+            RefreshWallet();
+			return true;
         }
         #endregion
 

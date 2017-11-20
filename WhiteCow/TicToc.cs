@@ -34,8 +34,7 @@ namespace WhiteCow
             else
             {
                 var polo = new Poloniex();
-
-
+              
 			}
                 
         }

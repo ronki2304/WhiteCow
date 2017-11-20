@@ -46,9 +46,7 @@
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.ServiceProcess" />
-    <Reference Include="log4net">
-      <HintPath>..\packages\log4net.2.0.8\lib\net45-full\log4net.dll</HintPath>
-    </Reference>
+    <Reference Include="System.ServiceModel" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -71,6 +69,9 @@
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitfinexOrderStatusResponse.cs" />
     <Compile Include="Entities\Trading\PositionTypeEnum.cs" />
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitFinexWithDrawal.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexLendInfo.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexAvailableAccountBalance.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexAccountType.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />
@@ -82,7 +83,6 @@
     <Folder Include="Entities\Bitfinex\PostRequest\" />
     <Folder Include="Entities\Bitfinex\PostRequest\V1\" />
     <Folder Include="Entities\Trading\" />
-    <Folder Include="Log\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
