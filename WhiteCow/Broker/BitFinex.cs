@@ -41,6 +41,7 @@ namespace WhiteCow.Broker
             {
                 try
                 {
+                    AuthorizePost();
                     String response = client.UploadString(address, request.serialize());
                     return response;
                 }
@@ -78,6 +79,7 @@ namespace WhiteCow.Broker
             {
                 try
                 {
+                    AuthorizePost();
                     output = client.UploadString(address, body);
                     break;
 
@@ -236,7 +238,7 @@ namespace WhiteCow.Broker
             request.Symbol = _Pair.ToLower();
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (BaseWallet.amount / LastTick.Last).ToString();
+                request.Amount = (_Leverage* BaseWallet.amount / LastTick.Last).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Long;
             }
             else
@@ -281,7 +283,7 @@ namespace WhiteCow.Broker
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (BaseWallet.amount / LastTick.Last).ToString();
+                request.Amount = (_Leverage* BaseWallet.amount / LastTick.Last).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Short;
             }
             else

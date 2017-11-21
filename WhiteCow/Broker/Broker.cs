@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using WhiteCow.Entities;
 using WhiteCow.Entities.Trading;
 
@@ -15,6 +17,9 @@ namespace WhiteCow.Broker
         protected readonly String _GetUrl;
         protected readonly String _PostUrl;
         protected readonly String _Pair;
+        protected readonly Double _Leverage;
+        protected readonly Int32 _NbCallPost;
+        protected readonly Int32 _CallPostMaxInterval;
 
         public readonly String _PublicAddress;
 
@@ -22,6 +27,10 @@ namespace WhiteCow.Broker
         protected Wallet QuoteWallet;
         protected Ticker LastTick { get; set; }
 
+        /// <summary>
+        /// use to constraint call number to avoid black listing
+        /// </summary>
+        protected volatile SynchronizedCollection<DateTime> NbPostCall;
 
 
         public PositionTypeEnum Position { get; protected set; }
@@ -51,9 +60,20 @@ namespace WhiteCow.Broker
             _PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
             _PublicAddress = ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
-            Position = PositionTypeEnum.Out;
+            _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]); 
+            _CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
+
+
+
+			Position = PositionTypeEnum.Out;
             IsInError = false;
-        }
+
+            _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Leverage"]);
+            if (_Leverage < 1.0)
+                _Leverage = 1.0;
+            else if (_Leverage > 2.5)
+                _Leverage = 2.5;
+         }
 
         protected string Base64Encode(string plainText)
         {
@@ -91,6 +111,31 @@ namespace WhiteCow.Broker
 
         }
 
+		/// <summary>
+		/// /// this method check if we are under the calling quota
+		/// if yes the method return
+		/// if no the method wait for 1 second before return
+        /// </summary>
+		protected void AuthorizePost()
+		{
+			Boolean isOK = false;
+
+			while (!isOK)
+			{
+				for (int i = 0; i < NbPostCall.Count; i++)
+				{
+					if (NbPostCall[i] < DateTime.Now.AddSeconds(_CallPostMaxInterval*-1))
+						NbPostCall.RemoveAt(i);
+				}
+                if (NbPostCall.Count <= _NbCallPost)
+				{
+					isOK = true;
+					NbPostCall.Add(DateTime.Now);
+				}
+				else
+					Thread.Sleep(1000);
+			}
+		}
 
 		/// <summary>
 		/// return an avarage rate lend

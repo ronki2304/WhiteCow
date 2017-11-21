@@ -16,50 +16,26 @@ namespace WhiteCow.Broker
 {
     public class Poloniex : Broker
     {
-		/// <summary>
-		/// poloniex doesn't permit to send directly money to margin part
+        /// <summary>
+        /// poloniex doesn't permit to send directly money to margin part
         /// all income come from exchange
-		/// </summary>
+        /// </summary>
         private Wallet ExchangeBaseWallet;
-        static SynchronizedCollection<DateTime> NbPostCall;
+
 
         public Poloniex() : base(Plateform.Poloniex.ToString())
         {
             QuoteWallet = new Wallet { currency = _Pair.Split('_')[1] };
-			BaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
+            BaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
             ExchangeBaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
             NbPostCall = new SynchronizedCollection<DateTime>();
             RefreshWallet();
 
         }
 
-		#region private
-        /// <summary>
-        /// this method check if we are under the 6 call per second autorized by poloniex
-        /// if yes the method return
-        /// if no the method wait for 1 second before return
-        /// </summary>
-        private static void AuthorizePost()
-        {
-            Boolean isOK = false;
+        #region private
 
-            while (!isOK)
-            {
-                for (int i = 0; i < NbPostCall.Count; i++)
-                {
-                    if (NbPostCall[i] < DateTime.Now.AddSeconds(-1))
-                        NbPostCall.RemoveAt(i);
-                }
-                if (NbPostCall.Count <= 6)
-                {
-                    isOK = true;
-                    NbPostCall.Add(DateTime.Now);
-                }
-                else
-                    Thread.Sleep(1000);
-            }
-        }
-		
+
         /// <summary>
         /// operate the post, and limit it to 6 per seconds
         /// </summary>
@@ -67,52 +43,52 @@ namespace WhiteCow.Broker
         /// <param name="PostData">Post data.</param>
         private String Post(String PostData)
         {
-			WebClient client = new WebClient();
-			client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-			client.Headers["key"] = _Key;
+            WebClient client = new WebClient();
+            client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
+            client.Headers["key"] = _Key;
             client.Headers["Sign"] = EncryptPost(PostData);
 
-			Int16 PostTry = 0;
-			while (PostTry < 3)
-			{
+            Int16 PostTry = 0;
+            while (PostTry < 3)
+            {
                 try
                 {
                     AuthorizePost();
                     String content = client.UploadString(_PostUrl, "POST", PostData);
                     Console.WriteLine(content);
                     return content;
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine("Poloniex Post exception occured :");
-					Console.WriteLine(ex.ToString());
-					if (PostTry >= 3)
-					{
-						IsInError = true;
-						return "error";
-					}
-					PostTry++;
-					//wait 5 secondes before retrying
-					Thread.Sleep(5000);
-				}
-			}
-			return String.Empty;
-		}
-		
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Poloniex Post exception occured :");
+                    Console.WriteLine(ex.ToString());
+                    if (PostTry >= 3)
+                    {
+                        IsInError = true;
+                        return "error";
+                    }
+                    PostTry++;
+                    //wait 5 secondes before retrying
+                    Thread.Sleep(5000);
+                }
+            }
+            return String.Empty;
+        }
+
         /// <summary>
         /// Encrypts the post with poloniex pre requisite.
         /// </summary>
         /// <returns>The post.</returns>
         /// <param name="PostData">Post data.</param>
-		private String EncryptPost(string PostData)
-		{
+        private String EncryptPost(string PostData)
+        {
             var keyByte = Encoding.UTF8.GetBytes(_Secret);
-			using (var hmacsha512 = new HMACSHA512(keyByte))
-			{
-				hmacsha512.ComputeHash(Encoding.UTF8.GetBytes(PostData));
-				return BitConverter.ToString(hmacsha512.Hash).Replace("-", "").ToLower();
-			}
-		}
+            using (var hmacsha512 = new HMACSHA512(keyByte))
+            {
+                hmacsha512.ComputeHash(Encoding.UTF8.GetBytes(PostData));
+                return BitConverter.ToString(hmacsha512.Hash).Replace("-", "").ToLower();
+            }
+        }
         #endregion
 
         #region http get
@@ -144,11 +120,27 @@ namespace WhiteCow.Broker
         /// </summary>
         /// <returns>The average yield loan.</returns>
 		protected override double GetAverageYieldLoan()
+        {
+            String address = _GetUrl + $"/public?command=returnLoanOrders&currency={BaseWallet.currency}";
+            WebClient client = new WebClient();
+            var lend = PoloniexLendInfo.FromJson(client.DownloadString(address));
+            return lend.Offers.Average(p => p.Rate);
+        }
+
+        private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth)
 		{
-			String address = _GetUrl + $"/public?command=returnLoanOrders&currency={BaseWallet.currency}";
+			String url = String.Concat(_GetUrl
+				, "returnOrderBook&currencyPair="
+                , _Pair
+				, "&depth="
+				, depth);
+
 			WebClient client = new WebClient();
-			var lend = PoloniexLendInfo.FromJson(client.DownloadString(address));
-			return lend.Offers.Average(p => p.Rate);
+
+			var content = client.DownloadString(url);
+            return PoloniexMarketOrderBook.FromJson(content);
+
+			
 		}
         #endregion
 
@@ -156,11 +148,21 @@ namespace WhiteCow.Broker
         #region http post
         public override bool MarginBuy()
         {
-            //maybe we have to remove  it
-            //because it make a double call to the same method in a quick interval
-            //or maybe it is usefull if we have latency
-            //I don't know
-            GetTick();
+            var orderbook = returnMarketOrderBook(10);
+
+            //convert to the target currency because this is amount required in target currency for all exchange
+            Double amount = BaseWallet.amount;
+
+            while (amount > 0.02)
+            {
+                String PostData = String.Concat("command=marginBuy&nonce=", DateTime.Now.getUnixMilliTime()
+                                                , "&currencyPair=", _Pair
+                                                , "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", LastTick.Bid).TrimEnd('0')
+                                                , "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", BaseWallet.amount / LastTick.Bid).TrimEnd('0')
+                 );
+
+                Post(PostData);
+            }
             return true;
         }
 
@@ -169,7 +171,7 @@ namespace WhiteCow.Broker
             throw new NotImplementedException();
         }
 
-         
+
 
         /// <summary>
         /// Refreshs the amount wallet.
@@ -180,14 +182,14 @@ namespace WhiteCow.Broker
             String PostData = "command=returnAvailableAccountBalances&nonce=" + DateTime.Now.getUnixMilliTime();
 
             var balances = PoloniexAvailableAccountBalance.FromJson(Post(PostData));
-           
+
 
             if (IsInError)
                 return false;
 
 
             //spolit to retrieve the different balance
-            if (balances.margin!=null && balances.margin.ContainsKey(BaseWallet.currency))
+            if (balances.margin != null && balances.margin.ContainsKey(BaseWallet.currency))
                 BaseWallet.amount = Convert.ToDouble(balances.margin[BaseWallet.currency]);
             else
                 BaseWallet.amount = 0.0;
@@ -197,14 +199,14 @@ namespace WhiteCow.Broker
             else
                 QuoteWallet.amount = 0.0;
 
-			if (balances.exchange != null && balances.exchange.ContainsKey(QuoteWallet.currency))
-				ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[QuoteWallet.currency]);
-			else
-				ExchangeBaseWallet.amount = 0.0;
-            
+            if (balances.exchange != null && balances.exchange.ContainsKey(QuoteWallet.currency))
+                ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[QuoteWallet.currency]);
+            else
+                ExchangeBaseWallet.amount = 0.0;
+
             Console.WriteLine($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Quote wallet amount {QuoteWallet.amount}{Environment.NewLine} Exchange base wallet : {ExchangeBaseWallet.amount}");
             return true;
-		}
+        }
 
         public override bool Send(string DestinationAddress, double Amount)
         {
@@ -232,17 +234,17 @@ namespace WhiteCow.Broker
                                             , Output.ToString()
                                            );
 
-            String res  =Post(PostData);
+            String res = Post(PostData);
             if (IsInError)
                 return false;
             RefreshWallet();
-			return true;
+            return true;
         }
         #endregion
 
-    } 
+    }
 
-	
+
 }
 
 
