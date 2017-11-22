@@ -73,6 +73,7 @@
     <Compile Include="Entities\Poloniex\PoloniexAvailableAccountBalance.cs" />
     <Compile Include="Entities\Poloniex\PoloniexAccountType.cs" />
     <Compile Include="Entities\Poloniex\PoloniexMarketOrderBook.cs" />
+    <Compile Include="Entities\WhiteCowMode.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />

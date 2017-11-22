@@ -115,6 +115,10 @@ namespace WhiteCow.Broker
             String address = _GetUrl + "/v2/ticker/t" + _Pair;
             WebClient client = new WebClient();
             var content = client.DownloadString(address);
+
+            if (String.IsNullOrEmpty(content))
+				return null;
+
             Ticker tick = new Ticker();
             var listParam = content.Split(',');
             tick.Bid = Convert.ToDouble(listParam[0].Substring(1));

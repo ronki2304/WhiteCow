@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using WhiteCow.Broker;
 
 using System.Collections.Generic;
+using WhiteCow.Entities;
 
 
 //miaou
@@ -14,50 +15,61 @@ namespace WhiteCow
 {
     public class TicToc : ServiceBase
     {
-		string fileName = "history.csv";
+        string fileName = "history.csv";
         Timer tm;
-         public static void Main(String[] args)
-    {
-        (new TicToc()).OnStart(new string[1]);
-        ServiceBase.Run(new TicToc());
-        Console.ReadLine();
+        Poloniex polo;
+        BitFinex btx;
+        Double ThresholdGap;
+        public static void Main(String[] args)
+        {
+            (new TicToc()).OnStart(new string[1]);
+            ServiceBase.Run(new TicToc());
+            Console.ReadLine();
 
-    }
+        }
 
 
         protected override void OnStart(string[] args)
         {
-            if (Convert.ToBoolean(ConfigurationManager.AppSettings["history"]))
-            {
-                String Header = "Date;Bitfinex;Cex.io;Poloniex";
-                if (!File.Exists(fileName))
-                    File.AppendAllText(fileName, Header + Environment.NewLine);
+            WhiteCowMode servicemode = (WhiteCowMode)Enum.Parse(typeof(WhiteCowMode), ConfigurationManager.AppSettings["Mode"]);
+            ThresholdGap = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.ThresholdGap"]);
 
-                tm = new Timer(HandleTimerCallback, null, 0, Convert.ToInt32(ConfigurationManager.AppSettings["Interval"]) * 1000);
+			polo = new Poloniex();
+			btx = new BitFinex();
+
+            switch (servicemode)
+            {
+                case WhiteCowMode.History:
+                    Console.WriteLine("History mode enable");
+                    String Header = "Date;Bitfinex;Cex.io;Poloniex";
+                    if (!File.Exists(fileName))
+                        File.AppendAllText(fileName, Header + Environment.NewLine);
+
+                    tm = new Timer(GenerateHistory, null, 0, Convert.ToInt32(ConfigurationManager.AppSettings["History.Interval"]) * 1000);
+                    break;
+                case WhiteCowMode.Runtime:
+                   
+                    StartToMooh();
+                    break;
+                case WhiteCowMode.Test:
+                default:
+                    Console.WriteLine("no mode selected service is stoping");
+                    this.Stop();
+                    break;
             }
-            else
-            {
 
-                Poloniex polo = new Poloniex();
-                polo.MarginBuy();
-                Console.WriteLine("wait");
-                Thread.Sleep(15000);
-                polo.ClosePosition();
-              
-			}
-                
+
         }
-		void HandleTimerCallback(object state)
-		{
-            BitFinex btf = new BitFinex();
-            Poloniex polo = new Poloniex();
+        void GenerateHistory(object state)
+        {
+           
             String bitfinextick, cextick, polotick;
             try
             {
-                var btfTicker = btf.GetTick();
+                var btfTicker = btx.GetTick();
                 bitfinextick = btfTicker.Last.ToString();
             }
-            catch 
+            catch
             { bitfinextick = String.Empty; }
 
             try
@@ -65,29 +77,83 @@ namespace WhiteCow
                 var cexTicker = CexIO.GetTick(ConfigurationManager.AppSettings["Cex.io.Pair"]);
                 cextick = cexTicker.Last.ToString();
             }
-            catch 
+            catch
             { cextick = String.Empty; }
-           
+
             try
             {
                 var PoloTicker = polo.GetTick();
                 polotick = PoloTicker.Last.ToString();
             }
-            catch 
-            { polotick = String.Empty; } 
+            catch
+            { polotick = String.Empty; }
 
             String content = $"{DateTime.Now.ToString()};{bitfinextick};{cextick};{polotick}";
-                Console.WriteLine(content);
+            Console.WriteLine(content);
 
-                File.AppendAllText(fileName, content + Environment.NewLine);
+            File.AppendAllText(fileName, content + Environment.NewLine);
 
-            
-		}
 
-		protected override void OnStop()
-		{
+        }
+
+        protected override void OnStop()
+        {
             tm.Dispose();
-		}
+        }
 
+        /// <summary>
+        /// start trading engine
+        /// </summary>
+        void StartToMooh()
+        {
+            TickGapAnalisys();
+
+
+        }
+
+        /// <summary>
+        /// Analyse if the gap is enough to start trading
+        /// if not 
+        /// </summary>
+        private void TickGapAnalisys()
+        {
+            //tick analisys
+            Double gap = 0.0;
+            do
+            {
+                Thread.Sleep(10000);
+
+                var polotick = polo.GetTick();
+                if (polotick == null)
+                    continue;
+
+                var btxtick = btx.GetTick();
+                if (btxtick == null)
+                    continue;
+                
+                if (polotick.Last > btxtick.Last)
+                    gap = polotick.Last / btxtick.Last - 100.0;
+                else
+                    gap = btxtick.Last / polotick.Last - 100.0;
+            } while (gap < ThresholdGap);
+            SetPosition();
+        }
+
+        /// <summary>
+        /// put all positions in both platform
+        /// </summary>
+        private void SetPosition()
+        {
+            if (polo.LastTick.Last > btx.LastTick.Last)
+            {
+                polo.MarginSell();
+                btx.MarginBuy();
+            }
+            else
+            {
+                polo.MarginBuy();
+                btx.MarginSell();
+            }
+        }
     }
 }

@@ -255,8 +255,8 @@ namespace WhiteCow.Broker
             else
                 QuoteWallet.amount = 0.0;
 
-            if (balances.exchange != null && balances.exchange.ContainsKey(QuoteWallet.currency))
-                ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[QuoteWallet.currency]);
+            if (balances.exchange != null && balances.exchange.ContainsKey(BaseWallet.currency))
+                ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[BaseWallet.currency]);
             else
                 ExchangeBaseWallet.amount = 0.0;
 
@@ -266,8 +266,27 @@ namespace WhiteCow.Broker
 
         public override bool Send(string DestinationAddress, double Amount)
         {
-            throw new NotImplementedException();
+            //RefreshWallet();
+            //Double originalExchangeAmount = ExchangeBaseWallet.amount;
+
+            //TransferFund( PoloniexAccountType.margin,PoloniexAccountType.exchange,Amount);
+
+            //while (ExchangeBaseWallet.amount==originalExchangeAmount)
+            //{
+            //    Thread.Sleep(3000);
+            //    RefreshWallet();
+            //}
+            long nonce = DateTime.Now.getUnixMilliTime();
+            String PostData = String.Concat("command=withdraw"
+                                            ,$"&currency={BaseWallet.currency}"
+                                            , $"&nonce={nonce}"
+                                            , $"&amount={Amount}"
+                                            , $"&address={DestinationAddress}");
+            Post(PostData);
+
+            return true;
         }
+
 
         /// <summary>
         /// permit to transfer fund between account

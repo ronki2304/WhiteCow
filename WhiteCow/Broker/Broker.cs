@@ -21,19 +21,19 @@ namespace WhiteCow.Broker
         protected readonly Int32 _NbCallPost;
         protected readonly Int32 _CallPostMaxInterval;
         protected readonly Double _MinimumSize;
-        public readonly String _PublicAddress;
-
         protected Wallet BaseWallet;
         protected Wallet QuoteWallet;
-        protected Ticker LastTick { get; set; }
+
 
         /// <summary>
         /// use to constraint call number to avoid black listing
         /// </summary>
         protected volatile SynchronizedCollection<DateTime> NbPostCall;
 
+		public readonly String _PublicAddress;
+		public Ticker LastTick { get; set; }
 
-        public PositionTypeEnum Position { get; protected set; }
+		public PositionTypeEnum Position { get; protected set; }
         public Boolean IsInError;
         /// <summary>
         /// return an avarage rate lend
@@ -63,12 +63,12 @@ namespace WhiteCow.Broker
             _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]); 
             _CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
             _MinimumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"{Platform}.MinimumSize"]);
-
+            _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Leverage"]);
 
 			Position = PositionTypeEnum.Out;
             IsInError = false;
 
-            _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Leverage"]);
+
             if (_Leverage < 1.0)
                 _Leverage = 1.0;
             else if (_Leverage > 2.5)
