@@ -20,7 +20,7 @@ namespace WhiteCow.Broker
         protected readonly Double _Leverage;
         protected readonly Int32 _NbCallPost;
         protected readonly Int32 _CallPostMaxInterval;
-
+        protected readonly Double _MinimumSize;
         public readonly String _PublicAddress;
 
         protected Wallet BaseWallet;
@@ -62,7 +62,7 @@ namespace WhiteCow.Broker
             _PublicAddress = ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
             _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]); 
             _CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
-
+            _MinimumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"{Platform}.MinimumSize"]);
 
 
 			Position = PositionTypeEnum.Out;
@@ -167,6 +167,8 @@ namespace WhiteCow.Broker
         /// <returns><c>true</c>, if sell was margined, <c>false</c> otherwise.</returns>
         public abstract Boolean MarginSell();
 
+        public abstract Boolean ClosePosition();
+
         /// <summary>
         /// Send coin to a specific address
         /// </summary>
@@ -174,6 +176,8 @@ namespace WhiteCow.Broker
         /// <param name="DestinationAddress">Destination address.</param>
         /// <param name="Amount">Amount.</param>
         public abstract Boolean Send(String DestinationAddress, double Amount);
+
+
 
     }
 }

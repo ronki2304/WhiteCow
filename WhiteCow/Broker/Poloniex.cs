@@ -130,7 +130,7 @@ namespace WhiteCow.Broker
         private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth)
 		{
 			String url = String.Concat(_GetUrl
-				, "returnOrderBook&currencyPair="
+				, "/public?command=returnOrderBook&currencyPair="
                 , _Pair
 				, "&depth="
 				, depth);
@@ -148,36 +148,92 @@ namespace WhiteCow.Broker
         #region http post
         public override bool MarginBuy()
         {
-            var orderbook = returnMarketOrderBook(10);
+			var orderbook = returnMarketOrderBook(20);
 
-            //convert to the target currency because this is amount required in target currency for all exchange
-            Double amount = BaseWallet.amount;
+			//convert to the target currency because this is amount required in target currency for all exchange
+			Double amount = BaseWallet.amount;
+			int i = -1;
+			while (amount > 0.02)
+			{
+				i++;
+				Double rate = (orderbook.Raw_asks[i])[0];
+				Double amountToLoad;
 
-            while (amount > 0.02)
-            {
-                String PostData = String.Concat("command=marginBuy&nonce=", DateTime.Now.getUnixMilliTime()
-                                                , "&currencyPair=", _Pair
-                                                , "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", LastTick.Bid).TrimEnd('0')
-                                                , "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", BaseWallet.amount / LastTick.Bid).TrimEnd('0')
-                 );
+				//need to ckeck if the current ask cover the entire available amount
+				if ((orderbook.Raw_asks[i])[1] < _MinimumSize)
+					continue;
+				else if (amount > (orderbook.Raw_asks[i])[1])
+					amountToLoad = (orderbook.Raw_asks[i])[1];
+				else
+					amountToLoad = amount;
 
-                Post(PostData);
-            }
-            return true;
+				String PostData = String.Concat("command=marginSell&nonce=", DateTime.Now.getUnixMilliTime()
+												, "&currencyPair=", _Pair
+												, "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", rate).TrimEnd('0')
+												, "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", amountToLoad / rate).TrimEnd('0')
+				 );
+                				
+				Post(PostData);
+
+				amount = amount - amountToLoad;
+			}
+			return true;
         }
 
         public override bool MarginSell()
         {
-            throw new NotImplementedException();
+			var orderbook = returnMarketOrderBook(20);
+
+			//convert to the target currency because this is amount required in target currency for all exchange
+			Double amount = BaseWallet.amount;
+			int i = -1;
+			while (amount > 0.02)
+			{
+                i++;
+				Double rate = (orderbook.Raw_bids[i])[0];
+				Double amountToLoad;
+
+                //need to ckeck if the current ask cover the entire available amount
+                if ((orderbook.Raw_bids[i])[1]<_MinimumSize)
+                    continue;
+                else if (amount > (orderbook.Raw_bids[i])[1])
+					amountToLoad = (orderbook.Raw_bids[i])[1];
+				else
+					amountToLoad = amount;
+
+				String PostData = String.Concat("command=marginSell&nonce=", DateTime.Now.getUnixMilliTime()
+												, "&currencyPair=", _Pair
+												, "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", rate).TrimEnd('0')
+												, "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", amountToLoad / rate).TrimEnd('0')
+				 );
+
+                Post(PostData);
+               
+                amount = amount - amountToLoad;
+			}
+			return true;
+        }
+
+        public void GetOpenPosition()
+        {
+            String PostData = "command=getMarginPosition&currencyPair=BTC_ETH&nonce=" + DateTime.Now.getUnixMilliTime();
+            string res = Post(PostData);
+
+
+        }
+        public override Boolean ClosePosition()
+        {
+            String PostData = "command=closeMarginPosition&currencyPair=BTC_ETH&nonce=" + DateTime.Now.getUnixMilliTime();
+            string res = Post(PostData);
+            return true;
         }
 
 
-
-        /// <summary>
-        /// Refreshs the amount wallet.
-        /// </summary>
-        /// <returns><c>true</c>, if wallet was refreshed, <c>false</c> error.</returns>
-        public override bool RefreshWallet()
+		/// <summary>
+		/// Refreshs the amount wallet.
+		/// </summary>
+		/// <returns><c>true</c>, if wallet was refreshed, <c>false</c> error.</returns>
+		public override bool RefreshWallet()
         {
             String PostData = "command=returnAvailableAccountBalances&nonce=" + DateTime.Now.getUnixMilliTime();
 

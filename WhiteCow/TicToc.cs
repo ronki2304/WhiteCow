@@ -3,8 +3,12 @@ using System.Configuration;
 using System.IO;
 using System.ServiceProcess;
 using System.Threading;
+using Newtonsoft.Json;
 using WhiteCow.Broker;
- 
+
+using System.Collections.Generic;
+
+
 //miaou
 namespace WhiteCow
 {
@@ -33,8 +37,12 @@ namespace WhiteCow
             }
             else
             {
-                var polo = new Poloniex();
+
+                Poloniex polo = new Poloniex();
                 polo.MarginBuy();
+                Console.WriteLine("wait");
+                Thread.Sleep(15000);
+                polo.ClosePosition();
               
 			}
                 

@@ -361,6 +361,21 @@ namespace WhiteCow.Broker
             return true;
 
         }
+
+        public override bool ClosePosition()
+        {
+            switch(Position)
+            {
+                case Entities.Trading.PositionTypeEnum.Long:
+                    return MarginSell();
+                case Entities.Trading.PositionTypeEnum.Short:
+                    return MarginBuy();
+                default:
+                    return true;
+
+            }
+        
+        }
         #endregion
     }
 }
