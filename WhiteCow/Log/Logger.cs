@@ -3,6 +3,9 @@ using System.IO;
 
 namespace WhiteCow.Log
 {
+    /// <summary>
+    /// logging class
+    /// </summary>
     public sealed class Logger
     {
 		private static volatile Logger instance;

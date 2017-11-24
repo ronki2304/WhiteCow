@@ -7,6 +7,9 @@ using WhiteCow.Interface;
 
 namespace WhiteCow.RuntimeMode
 {
+    /// <summary>
+    /// retrieving data for analysis before go to trading
+    /// </summary>
     public class History: IRuntimeMode
     {
 		Poloniex polo ;
