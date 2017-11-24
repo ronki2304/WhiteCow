@@ -9,6 +9,7 @@ using System.Linq;
 using WhiteCow.Entities.Bitfinex.PostRequest.V1;
 using System.Diagnostics;
 using System.Threading;
+using WhiteCow.Log;
 
 namespace WhiteCow.Broker
 {
@@ -18,16 +19,14 @@ namespace WhiteCow.Broker
 
         public BitFinex() : base(Plateform.BitFinex.ToString())
         {
-
             QuoteWallet = new Wallet { currency = _Pair.Substring(0, 3) };
             BaseWallet = new Wallet { currency = _Pair.Substring(3, 3) };
             RefreshWallet();
-
         }
         #region private 
         private String PostV1(string apiPath, BitfinexPostBase request)
         {
-
+            Logger.Instance.LogInfo($"Bitfinex Post V1 selected for the method {apiPath}");
             String body64 = Base64Encode(request.serialize());
             String address = _PostUrl + apiPath;
             WebClient client = new WebClient();
@@ -43,27 +42,34 @@ namespace WhiteCow.Broker
                 {
                     AuthorizePost();
                     String response = client.UploadString(address, request.serialize());
+                    Logger.Instance.LogInfo(String.Concat("Response is : ", response));
+                    IsInError = false;
                     return response;
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Post V1 exception occured :");
-                    Console.WriteLine(ex.ToString());
+                    Logger.Instance.LogWarning($"Post V1 for {apiPath} exception occured :");
+                    Logger.Instance.LogWarning(ex.ToString());
                     if (PostTry >= 3)
                     {
                         IsInError = true;
-                        return "error";
+                        Logger.Instance.LogError($"Post V1 for {apiPath} exception occured :");
+						Logger.Instance.LogError(ex);
+
+						return "error";
                     }
                     PostTry++;
                     //wait 5 secondes before retrying
                     Thread.Sleep(5000);
                 }
             }
+
             return String.Empty;
 
         }
         private String PostV2(string apiPath, String body, long nonce)
         {
+			Logger.Instance.LogInfo($"Bitfinex Post V2 selected for the method {apiPath}");
             String address = _PostUrl + apiPath;
 
             WebClient client = new WebClient();
@@ -81,16 +87,19 @@ namespace WhiteCow.Broker
                 {
                     AuthorizePost();
                     output = client.UploadString(address, body);
+                    Logger.Instance.LogInfo(String.Concat("Response is : ",output));
                     break;
 
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Post V2 exception occured :");
-                    Console.WriteLine(ex.ToString());
+                    Logger.Instance.LogWarning($"Post V2 for {apiPath} exception occured :");
+                    Logger.Instance.LogWarning(ex.ToString());
                     if (PostTry >= 3)
                     {
                         IsInError = true;
+                        Logger.Instance.LogError($"Post V2 for {apiPath} exception occured :");
+						Logger.Instance.LogError(ex);
                         return "error";
                     }
                     PostTry++;
@@ -101,7 +110,7 @@ namespace WhiteCow.Broker
 
             if (String.IsNullOrEmpty(output))
                 IsInError = true;
-            Console.WriteLine(output);
+            
             return output;
         }
         #endregion
@@ -119,7 +128,10 @@ namespace WhiteCow.Broker
             var content = client.DownloadString(address);
 
             if (String.IsNullOrEmpty(content))
-				return null;
+            {
+                Logger.Instance.LogWarning("Bitfinex : ticker time out");
+                return null;
+            }
 
             Ticker tick = new Ticker();
             var listParam = content.Split(',');
@@ -143,14 +155,17 @@ namespace WhiteCow.Broker
         /// </summary>
         public override Boolean RefreshWallet()
         {
-
+            Logger.Instance.LogInfo("Bitfinex Refresh Wallet started");
             const String apiPath = "/v2/auth/r/wallets";
             const String body = "{}";
             String output = PostV2(apiPath, body, DateTime.Now.getUnixTime());
 
             //call post failed three times then stop process
             if (IsInError)
+            {
+                Logger.Instance.LogWarning("Bitfinex Refresh wallet failed");
                 return false;
+            }
             output = output.Substring(1, output.Length - 2);
 
             //split by array
@@ -180,12 +195,13 @@ namespace WhiteCow.Broker
                 QuoteWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
             Console.WriteLine($"Quote wallet new amount : {QuoteWallet.amount}");
             IsInError = false;
+            Logger.Instance.LogInfo("Bitfinex Refresh wallet succeeded");
             return true;
         }
 
         public String ListOpenPositions()
         {
-
+            Logger.Instance.LogInfo("Bitfinex List Open Position started");
             const String apiPath = "/v2/auth/r/positions";
             var nonce = DateTime.Now.getUnixTime();
             const String body = "{}";
@@ -193,15 +209,20 @@ namespace WhiteCow.Broker
 
             //call post failed three times then stop process
             if (IsInError)
+            {
+                Logger.Instance.LogWarning("BitFinex List Open postion failed");
                 return String.Empty;
+            }
             IsInError = false;
+
+            Logger.Instance.LogInfo("Bitfinex List Open Position end");
             return res;
 
         }
 
         protected override Double GetAverageYieldLoan()
         {
-
+            Logger.Instance.LogInfo("Bitfinex Get average Yield started");
             const String apiPath = "/v2/auth/r/info/funding/";
             var nonce = DateTime.Now.getUnixTime();
             const String body = "{}";
@@ -209,13 +230,19 @@ namespace WhiteCow.Broker
 
             //call post failed three times then stop process
             if (IsInError)
+            {
+                Logger.Instance.LogWarning("BitFinex Get average Yield has failed");
+
                 return Double.NaN;
+            }
             IsInError = false;
+            Logger.Instance.LogInfo("Bitfinex Get average Yield end");
             return Convert.ToDouble(res.Split(',')[3]);
         }
 
         public bool Account_info()
         {
+            Logger.Instance.LogInfo("Bitfinex Account info started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/account_infos";
             BitfinexPostBase request = new BitfinexPostBase();
@@ -226,15 +253,19 @@ namespace WhiteCow.Broker
 
             //call post failed three times then stop process
             if (IsInError)
+            {
+				Logger.Instance.LogWarning("BitFinex Account info has failed");
                 return false;
+            }
             IsInError = false;
-
+            Logger.Instance.LogInfo("Bitfinex Account info ended");
             return true;
         }
 
 
         public override bool MarginBuy()
         {
+            Logger.Instance.LogInfo("Bitfinex Margin buy started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/order/new";
 
@@ -257,20 +288,27 @@ namespace WhiteCow.Broker
             request.Side = "buy";
             request.Type = "market";
             request.use_all_available = "1";
+
+            Logger.Instance.LogInfo($"Bitfinex margin amount is {request.Amount}");
             try
             {
                 BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
                 //call post failed three times then stop process
                 if (IsInError)
+                {
+                    Logger.Instance.LogWarning("BitFinex Margin Buy has failed");
                     return false;
+                }
                 IsInError = false;
 
                 QuoteAmount = Convert.ToDouble(response.OriginalAmount);
+                Logger.Instance.LogInfo("Bitfinex Margin buy ended");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Logger.Instance.LogError("bitfinex Margin buy failed");
+                Logger.Instance.LogError(ex);
                 IsInError = true;
                 return false;
             }
@@ -279,6 +317,7 @@ namespace WhiteCow.Broker
 
         public override Boolean MarginSell()
         {
+            Logger.Instance.LogInfo("Bitfinex Margin sell started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/order/new";
 
@@ -301,22 +340,25 @@ namespace WhiteCow.Broker
             request.Side = "sell";
             request.Type = "market";
             request.use_all_available = "1";
-
+            Logger.Instance.LogInfo($"Bitfinex margin amount is {request.Amount}");
             try
             {
                 BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
                 //call post failed three times then stop process
                 if (IsInError)
+                {
+                    Logger.Instance.LogWarning("BitFinex Margin Buy has failed");
                     return false;
-                IsInError = false;
+                }
 
                 QuoteAmount = Convert.ToDouble(response.OriginalAmount);
-
+                Logger.Instance.LogInfo("Bitfinex Margin sell ended");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+				Logger.Instance.LogError("bitfinex Margin sell failed");
+				Logger.Instance.LogError(ex);
                 IsInError = true;
                 return false;
             }
@@ -324,6 +366,7 @@ namespace WhiteCow.Broker
 
         public Boolean CancelOrder(Int64 orderId)
         {
+            Logger.Instance.LogInfo("Bitfinex Cancel Order started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/order/cancel";
 
@@ -334,11 +377,13 @@ namespace WhiteCow.Broker
             try
             {
                 PostV1(apiPath, request);
+                Logger.Instance.LogInfo("Bitfinex Cancel Order ended");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Logger.Instance.LogError("bitfinex Cancel Order Failed");
+                Logger.Instance.LogError(ex);
                 return false;
             }
         }
@@ -346,6 +391,7 @@ namespace WhiteCow.Broker
 
         public override bool Send(string DestinationAddress, double Amount)
         {
+            Logger.Instance.LogInfo("Bitfinex Send money started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/withdraw";
 
@@ -361,9 +407,13 @@ namespace WhiteCow.Broker
 
             //call post failed three times then stop process
             if (IsInError)
+            {
+                Logger.Instance.LogError("Bitfinex Send money has failed");
                 return false;
+            }
             IsInError = false;
 
+            Logger.Instance.LogInfo("Bitfinex Send money ended");
             return true;
 
         }
@@ -373,12 +423,13 @@ namespace WhiteCow.Broker
             switch(Position)
             {
                 case Entities.Trading.PositionTypeEnum.Long:
+                    Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
                     return MarginSell();
                 case Entities.Trading.PositionTypeEnum.Short:
+                    Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
                     return MarginBuy();
                 default:
                     return true;
-
             }
         
         }
@@ -387,13 +438,20 @@ namespace WhiteCow.Broker
         {
             if (Fees == null)
             {
-                long nonce = DateTime.Now.getUnixTime();
-                const String apiPath = "/v1/account_fees";
-                BitfinexPostBase request = new BitfinexPostBase();
-                request.Nonce = nonce.ToString();
-                request.Request = apiPath;
-                String content = PostV1(apiPath, request);
-                Fees = BitFinexAccountFees.FromJson(content).Withdraw;
+                Logger.Instance.LogInfo("BitFinex Call WithDraw fees started");
+                do
+                {
+                    long nonce = DateTime.Now.getUnixTime();
+                    const String apiPath = "/v1/account_fees";
+                    BitfinexPostBase request = new BitfinexPostBase();
+                    request.Nonce = nonce.ToString();
+                    request.Request = apiPath;
+                    String content = PostV1(apiPath, request);
+                    if (IsInError)
+                        continue;
+                    Fees = BitFinexAccountFees.FromJson(content).Withdraw;
+                    Logger.Instance.LogInfo("BitFinex Call WithDraw fees ended");
+                } while (IsInError);
             }
             return Fees[BaseWallet.currency];
 		}

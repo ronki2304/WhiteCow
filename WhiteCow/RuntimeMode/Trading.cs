@@ -21,8 +21,8 @@ namespace WhiteCow.RuntimeMode
         /// </summary>
         public void StartToMooh()
 		{
-            Poloniex polo = new Poloniex();
-            polo.CheckReceiveFund(0.001);
+            BitFinex btx = new BitFinex();
+            btx.Account_info();
 			//TickGapAnalisys();
 		}
 

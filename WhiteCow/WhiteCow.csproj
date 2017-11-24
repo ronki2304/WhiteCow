@@ -81,6 +81,8 @@
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitFinexAccountFees.cs" />
     <Compile Include="Interface\IRuntimeMode.cs" />
     <Compile Include="Entities\Trading\TradingStep.cs" />
+    <Compile Include="Log\Logger.cs" />
+    <Compile Include="RuntimeMode\Test.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />
@@ -93,6 +95,7 @@
     <Folder Include="Entities\Bitfinex\PostRequest\V1\" />
     <Folder Include="Entities\Trading\" />
     <Folder Include="RuntimeMode\" />
+    <Folder Include="Log\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
