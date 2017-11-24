@@ -8,6 +8,7 @@ using WhiteCow.Broker;
 
 using System.Collections.Generic;
 using WhiteCow.Entities;
+using WhiteCow.RuntimeMode;
 
 
 //miaou
@@ -15,10 +16,9 @@ namespace WhiteCow
 {
     public class TicToc : ServiceBase
     {
-        string fileName = "history.csv";
+      
         Timer tm;
-        Poloniex polo;
-        BitFinex btx;
+        History hist;
         Double ThresholdGap;
         public static void Main(String[] args)
         {
@@ -34,18 +34,13 @@ namespace WhiteCow
             WhiteCowMode servicemode = (WhiteCowMode)Enum.Parse(typeof(WhiteCowMode), ConfigurationManager.AppSettings["Mode"]);
             ThresholdGap = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.ThresholdGap"]);
 
-			polo = new Poloniex();
-			btx = new BitFinex();
 
             switch (servicemode)
             {
                 case WhiteCowMode.History:
-                    Console.WriteLine("History mode enable");
-                    String Header = "Date;Bitfinex;Cex.io;Poloniex";
-                    if (!File.Exists(fileName))
-                        File.AppendAllText(fileName, Header + Environment.NewLine);
+                    hist = new History();
 
-                    tm = new Timer(GenerateHistory, null, 0, Convert.ToInt32(ConfigurationManager.AppSettings["History.Interval"]) * 1000);
+                    tm = new Timer(hist.GenerateHistory, null, 0, Convert.ToInt32(ConfigurationManager.AppSettings["History.Interval"]) * 1000);
                     break;
                 case WhiteCowMode.Runtime:
                    
@@ -60,41 +55,7 @@ namespace WhiteCow
 
 
         }
-        void GenerateHistory(object state)
-        {
-           
-            String bitfinextick, cextick, polotick;
-            try
-            {
-                var btfTicker = btx.GetTick();
-                bitfinextick = btfTicker.Last.ToString();
-            }
-            catch
-            { bitfinextick = String.Empty; }
-
-            try
-            {
-                var cexTicker = CexIO.GetTick(ConfigurationManager.AppSettings["Cex.io.Pair"]);
-                cextick = cexTicker.Last.ToString();
-            }
-            catch
-            { cextick = String.Empty; }
-
-            try
-            {
-                var PoloTicker = polo.GetTick();
-                polotick = PoloTicker.Last.ToString();
-            }
-            catch
-            { polotick = String.Empty; }
-
-            String content = $"{DateTime.Now.ToString()};{bitfinextick};{cextick};{polotick}";
-            Console.WriteLine(content);
-
-            File.AppendAllText(fileName, content + Environment.NewLine);
-
-
-        }
+       
 
         protected override void OnStop()
         {
@@ -106,54 +67,85 @@ namespace WhiteCow
         /// </summary>
         void StartToMooh()
         {
-            TickGapAnalisys();
-
-
+			BitFinex btx = new BitFinex();
+            Console.WriteLine(btx.GetWithDrawFees());
+            //TickGapAnalisys();
         }
 
         /// <summary>
         /// Analyse if the gap is enough to start trading
-        /// if not 
+        /// if not then wait
         /// </summary>
         private void TickGapAnalisys()
         {
+            Poloniex polo = new Poloniex();
+            BitFinex btx = new BitFinex();
+
             //tick analisys
             Double gap = 0.0;
             do
             {
                 Thread.Sleep(10000);
 
-                var polotick = polo.GetTick();
-                if (polotick == null)
+                if (polo.LastTick == null)
                     continue;
 
-                var btxtick = btx.GetTick();
-                if (btxtick == null)
+
+                if (btx.LastTick == null)
                     continue;
                 
-                if (polotick.Last > btxtick.Last)
-                    gap = polotick.Last / btxtick.Last - 100.0;
+                if (polo.LastTick.Last > btx.LastTick.Last)
+                    gap = polo.LastTick.Last / btx.LastTick.Last - 100.0;
                 else
-                    gap = btxtick.Last / polotick.Last - 100.0;
+                    gap = btx.LastTick.Last / polo.LastTick.Last - 100.0;
             } while (gap < ThresholdGap);
-            SetPosition();
+
+            if (polo.LastTick.Last > btx.LastTick.Last)
+                SetPosition(btx, polo);
+            else
+                SetPosition(polo, btx);
         }
 
-        /// <summary>
-        /// put all positions in both platform
-        /// </summary>
-        private void SetPosition()
+		/// <summary>
+		/// put all positions in both platform
+		/// </summary>
+		/// <param name="Brlow">low broker ticker</param>
+		/// <param name="BrHigh">low broker ticker</param>
+		private void SetPosition(Broker.Broker Brlow, Broker.Broker BrHigh)
         {
-            if (polo.LastTick.Last > btx.LastTick.Last)
-            {
-                polo.MarginSell();
-                btx.MarginBuy();
-            }
-            else
-            {
-                polo.MarginBuy();
-                btx.MarginSell();
-            }
+            Brlow.MarginBuy();
+            BrHigh.MarginSell();
+            ClosePosition(Brlow,BrHigh);
+        }
+		/// <summary>
+		/// wait for the cross or nearly the cross for closing position
+		/// </summary>
+		/// <param name="Brlow">low broker ticker</param>
+		/// <param name="BrHigh">low broker ticker</param>
+		private void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh)
+        {			
+			do
+			{
+				Thread.Sleep(10000);
+
+				if (Brlow.LastTick == null)
+					continue;
+                
+				if (BrHigh.LastTick == null)
+					continue;
+            } while (BrHigh.LastTick.Last/Brlow.LastTick.Last-100>Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
+
+            BrHigh.ClosePosition();
+            Brlow.ClosePosition();
+        }
+		/// <summary>
+		/// Reequilibrate all broker
+		/// </summary>
+		/// <param name="Brlow">low broker ticker</param>
+		/// <param name="BrHigh">low broker ticker</param>
+		private void EquilibrateFund(Broker.Broker Brlow, Broker.Broker BrHigh)
+        {
+            
         }
     }
 }

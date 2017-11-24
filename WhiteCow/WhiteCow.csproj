@@ -74,6 +74,10 @@
     <Compile Include="Entities\Poloniex\PoloniexAccountType.cs" />
     <Compile Include="Entities\Poloniex\PoloniexMarketOrderBook.cs" />
     <Compile Include="Entities\WhiteCowMode.cs" />
+    <Compile Include="RuntimeMode\History.cs" />
+    <Compile Include="RuntimeMode\Trading.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexCurrencyInfos.cs" />
+    <Compile Include="Entities\Bitfinex\PostRequest\V1\BitFinexAccountFees.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />
@@ -85,6 +89,7 @@
     <Folder Include="Entities\Bitfinex\PostRequest\" />
     <Folder Include="Entities\Bitfinex\PostRequest\V1\" />
     <Folder Include="Entities\Trading\" />
+    <Folder Include="RuntimeMode\" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

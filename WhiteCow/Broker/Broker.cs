@@ -24,6 +24,11 @@ namespace WhiteCow.Broker
         protected Wallet BaseWallet;
         protected Wallet QuoteWallet;
 
+        /// <summary>
+        /// contain all withdraw Fees
+        /// </summary>
+        protected Dictionary<String, Double> Fees;
+
 
         /// <summary>
         /// use to constraint call number to avoid black listing
@@ -31,9 +36,28 @@ namespace WhiteCow.Broker
         protected volatile SynchronizedCollection<DateTime> NbPostCall;
 
 		public readonly String _PublicAddress;
-		public Ticker LastTick { get; set; }
 
-		public PositionTypeEnum Position { get; protected set; }
+        #region Tick
+        /// <summary>
+        /// return the last tick
+        /// to prevent overload all call to the get service is called every seconde
+        /// </summary>
+        /// <value>The last tick.</value>
+        /// 
+        public Ticker LastTick { get{
+                if (DateTime.Now.AddSeconds(-1) >= LastTickCalled)
+                {
+                    LastTickCalled = DateTime.Now;
+                    _LastTick= GetTick();
+                }
+                return _LastTick;
+            } }
+
+        DateTime LastTickCalled;
+        Ticker _LastTick;
+        #endregion
+
+        public PositionTypeEnum Position { get; protected set; }
         public Boolean IsInError;
         /// <summary>
         /// return an avarage rate lend
@@ -67,7 +91,8 @@ namespace WhiteCow.Broker
 
 			Position = PositionTypeEnum.Out;
             IsInError = false;
-
+            LastTickCalled = DateTime.Now;
+			NbPostCall = new SynchronizedCollection<DateTime>();
 
             if (_Leverage < 1.0)
                 _Leverage = 1.0;
@@ -148,7 +173,7 @@ namespace WhiteCow.Broker
         /// Gets the tick.
         /// </summary>
         /// <returns>The tick.</returns>
-        public abstract Ticker GetTick();
+        protected abstract Ticker GetTick();
 
         /// <summary>
         /// Refreshs the wallet.
@@ -177,7 +202,11 @@ namespace WhiteCow.Broker
         /// <param name="Amount">Amount.</param>
         public abstract Boolean Send(String DestinationAddress, double Amount);
 
-
+        /// <summary>
+        /// Gets the with draw fees for the base currency
+        /// </summary>
+        /// <returns>The with draw fees.</returns>
+        public abstract Double GetWithDrawFees();
 
     }
 }

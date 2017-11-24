@@ -99,6 +99,8 @@ namespace WhiteCow.Broker
                 }
             }
 
+            if (String.IsNullOrEmpty(output))
+                IsInError = true;
             Console.WriteLine(output);
             return output;
         }
@@ -109,7 +111,7 @@ namespace WhiteCow.Broker
         /// Gets the tick.
         /// </summary>
         /// <returns>The tick.</returns>
-        public override Ticker GetTick()
+        protected override Ticker GetTick()
         {
             //System.Security.Cryptography.AesCryptoServiceProvider b = new System.Security.Cryptography.AesCryptoServiceProvider();
             String address = _GetUrl + "/v2/ticker/t" + _Pair;
@@ -129,7 +131,7 @@ namespace WhiteCow.Broker
             tick.Volume = Convert.ToDouble(listParam[7]);
             tick.Timestamp = DateTime.Now.getUnixTime();
 
-            LastTick = tick;
+
             return tick;
         }
         #endregion
@@ -380,6 +382,21 @@ namespace WhiteCow.Broker
             }
         
         }
+
+        public override double GetWithDrawFees()
+        {
+            if (Fees == null)
+            {
+                long nonce = DateTime.Now.getUnixTime();
+                const String apiPath = "/v1/account_fees";
+                BitfinexPostBase request = new BitfinexPostBase();
+                request.Nonce = nonce.ToString();
+                request.Request = apiPath;
+                String content = PostV1(apiPath, request);
+                Fees = BitFinexAccountFees.FromJson(content).Withdraw;
+            }
+            return Fees[BaseWallet.currency];
+		}
         #endregion
     }
 }

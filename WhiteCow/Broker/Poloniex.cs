@@ -28,7 +28,7 @@ namespace WhiteCow.Broker
             QuoteWallet = new Wallet { currency = _Pair.Split('_')[1] };
             BaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
             ExchangeBaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
-            NbPostCall = new SynchronizedCollection<DateTime>();
+           
             RefreshWallet();
 
         }
@@ -96,13 +96,16 @@ namespace WhiteCow.Broker
         /// Gets the tick for a specified pair
         /// </summary>
         /// <returns>The tick.</returns>
-        public override Ticker GetTick()
+        protected override Ticker GetTick()
         {
             String address = _GetUrl + "/public?command=returnTicker";
             WebClient client = new WebClient();
 
+            var content = client.DownloadString(address);
 
-            var poloticker = PoloniexTicker.FromJson(client.DownloadString(address));
+            if (String.IsNullOrEmpty(content))
+                return null;
+            var poloticker = PoloniexTicker.FromJson(content);
 
             Ticker otick = new Ticker();
             otick.Ask = poloticker[_Pair].LowestAsk;
@@ -142,6 +145,29 @@ namespace WhiteCow.Broker
 
 			
 		}
+
+        public override Double GetWithDrawFees()
+        {
+            if (Fees == null)
+            {
+
+                String url = String.Concat(_GetUrl, "/public?command=returnCurrencies");
+
+                WebClient client = new WebClient();
+
+                var content = client.DownloadString(url);
+                var currencies = PoloniexCurrencyInfos.FromJson(content);
+
+                Fees = new Dictionary<String, Double>();
+
+                foreach (String key in currencies.Keys)
+                {
+                    Fees.Add(key,currencies[key].TxFee);
+                }
+            }
+            return Fees[BaseWallet.currency];
+
+        }
         #endregion
 
 
