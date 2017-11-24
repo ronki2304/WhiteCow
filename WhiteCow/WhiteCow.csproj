@@ -32,6 +32,7 @@
     <DebugSymbols>false</DebugSymbols>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug</OutputPath>
+    <DefineConstants>DEBUG;</DefineConstants>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
@@ -78,6 +79,8 @@
     <Compile Include="RuntimeMode\Trading.cs" />
     <Compile Include="Entities\Poloniex\PoloniexCurrencyInfos.cs" />
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitFinexAccountFees.cs" />
+    <Compile Include="Interface\IRuntimeMode.cs" />
+    <Compile Include="Entities\Trading\TradingStep.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />

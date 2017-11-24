@@ -1,17 +1,22 @@
 ﻿using System;
 using System.Configuration;
 using System.IO;
+using System.Threading;
 using WhiteCow.Broker;
+using WhiteCow.Interface;
 
 namespace WhiteCow.RuntimeMode
 {
-    public class History
+    public class History: IRuntimeMode
     {
 		Poloniex polo ;
 		BitFinex btx ;
 		string fileName = "history.csv";
-        public History()
+		Timer tm;
+
+        public void StartToMooh()
         {
+            
 			polo = new Poloniex();
 			btx = new BitFinex();
 
@@ -19,9 +24,12 @@ namespace WhiteCow.RuntimeMode
 			String Header = "Date;Bitfinex;Cex.io;Poloniex";
 			if (!File.Exists(fileName))
 				File.AppendAllText(fileName, Header + Environment.NewLine);
-        }
 
-		public void GenerateHistory(object state)
+			tm = new Timer(GenerateHistory, null, 0, Convert.ToInt32(ConfigurationManager.AppSettings["History.Interval"]) * 1000);
+
+		}
+
+        public void GenerateHistory(object state)
 		{
 			
 			String bitfinextick, cextick, polotick;
@@ -53,5 +61,10 @@ namespace WhiteCow.RuntimeMode
 
 
 		}
+
+        public void Dispose()
+        {
+            tm.Dispose();
+        }
     }
 }

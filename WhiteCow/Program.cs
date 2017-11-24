@@ -9,13 +9,15 @@ namespace WhiteCow
 {
     class MainClass
     {
-         /*   public static void Main(string[] args)
+#if !DEBUG
+        public static void Main(string[] args)
         {
             ServiceBase[] ServicesToRun;
             ServicesToRun = new ServiceBase[] { new TicToc() };
             ServiceBase.Run(ServicesToRun);
-        }*/
+        }
+#endif
 
-       
+
     }
 }

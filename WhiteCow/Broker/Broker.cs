@@ -21,7 +21,8 @@ namespace WhiteCow.Broker
         protected readonly Int32 _NbCallPost;
         protected readonly Int32 _CallPostMaxInterval;
         protected readonly Double _MinimumSize;
-        protected Wallet BaseWallet;
+        protected readonly Double _MaximumSize;
+        public Wallet BaseWallet { get; protected set; }
         protected Wallet QuoteWallet;
 
         /// <summary>
@@ -35,7 +36,7 @@ namespace WhiteCow.Broker
         /// </summary>
         protected volatile SynchronizedCollection<DateTime> NbPostCall;
 
-		public readonly String _PublicAddress;
+        public readonly String _PublicAddress;
 
         #region Tick
         /// <summary>
@@ -44,14 +45,18 @@ namespace WhiteCow.Broker
         /// </summary>
         /// <value>The last tick.</value>
         /// 
-        public Ticker LastTick { get{
+        public Ticker LastTick
+        {
+            get
+            {
                 if (DateTime.Now.AddSeconds(-1) >= LastTickCalled)
                 {
                     LastTickCalled = DateTime.Now;
-                    _LastTick= GetTick();
+                    _LastTick = GetTick();
                 }
                 return _LastTick;
-            } }
+            }
+        }
 
         DateTime LastTickCalled;
         Ticker _LastTick;
@@ -84,21 +89,22 @@ namespace WhiteCow.Broker
             _PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
             _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
             _PublicAddress = ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
-            _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]); 
+            _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]);
             _CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
             _MinimumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"{Platform}.MinimumSize"]);
+            _MaximumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"Runtime.MaximumSize"]);
             _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Leverage"]);
 
-			Position = PositionTypeEnum.Out;
+            Position = PositionTypeEnum.Out;
             IsInError = false;
             LastTickCalled = DateTime.Now;
-			NbPostCall = new SynchronizedCollection<DateTime>();
+            NbPostCall = new SynchronizedCollection<DateTime>();
 
             if (_Leverage < 1.0)
                 _Leverage = 1.0;
             else if (_Leverage > 2.5)
                 _Leverage = 2.5;
-         }
+        }
 
         protected string Base64Encode(string plainText)
         {
@@ -136,37 +142,37 @@ namespace WhiteCow.Broker
 
         }
 
-		/// <summary>
-		/// /// this method check if we are under the calling quota
-		/// if yes the method return
-		/// if no the method wait for 1 second before return
+        /// <summary>
+        /// /// this method check if we are under the calling quota
+        /// if yes the method return
+        /// if no the method wait for 1 second before return
         /// </summary>
-		protected void AuthorizePost()
-		{
-			Boolean isOK = false;
+        protected void AuthorizePost()
+        {
+            Boolean isOK = false;
 
-			while (!isOK)
-			{
-				for (int i = 0; i < NbPostCall.Count; i++)
-				{
-					if (NbPostCall[i] < DateTime.Now.AddSeconds(_CallPostMaxInterval*-1))
-						NbPostCall.RemoveAt(i);
-				}
+            while (!isOK)
+            {
+                for (int i = 0; i < NbPostCall.Count; i++)
+                {
+                    if (NbPostCall[i] < DateTime.Now.AddSeconds(_CallPostMaxInterval * -1))
+                        NbPostCall.RemoveAt(i);
+                }
                 if (NbPostCall.Count <= _NbCallPost)
-				{
-					isOK = true;
-					NbPostCall.Add(DateTime.Now);
-				}
-				else
-					Thread.Sleep(1000);
-			}
-		}
+                {
+                    isOK = true;
+                    NbPostCall.Add(DateTime.Now);
+                }
+                else
+                    Thread.Sleep(1000);
+            }
+        }
 
-		/// <summary>
-		/// return an avarage rate lend
-		/// </summary>
-		/// <value>The average yield loan.</value>
-		protected abstract Double GetAverageYieldLoan();
+        /// <summary>
+        /// return an avarage rate lend
+        /// </summary>
+        /// <value>The average yield loan.</value>
+        protected abstract Double GetAverageYieldLoan();
 
 
         /// <summary>
@@ -180,7 +186,7 @@ namespace WhiteCow.Broker
         /// </summary>
         /// <returns><c>true</c>, if wallet was refreshed, <c>false</c> otherwise.</returns>
         public abstract Boolean RefreshWallet();
-       
+
         /// <summary>
         /// Take a long position in margin market
         /// </summary>
@@ -208,5 +214,25 @@ namespace WhiteCow.Broker
         /// <returns>The with draw fees.</returns>
         public abstract Double GetWithDrawFees();
 
+        /// <summary>
+        /// wait for the fund from antoher place
+        /// when they arrived if needed put them into margin account
+        /// </summary>
+        /// <returns><c>true</c>, if receive fund was checked, <c>false</c> otherwise.</returns>
+        public virtual Boolean CheckReceiveFund(Double amount)
+        {
+			Double oldAmount = BaseWallet.amount;
+
+			while (BaseWallet.amount == oldAmount)
+			{
+                Console.WriteLine("funds not received for wait 3 min again");
+                //wait 3 minuts
+				Thread.Sleep(180000);
+				oldAmount =  BaseWallet.amount;
+				RefreshWallet();
+
+			}
+            return true;
+        }
     }
 }

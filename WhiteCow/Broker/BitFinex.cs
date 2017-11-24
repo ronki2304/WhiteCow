@@ -244,7 +244,7 @@ namespace WhiteCow.Broker
             request.Symbol = _Pair.ToLower();
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (_Leverage* BaseWallet.amount / LastTick.Last).ToString();
+                request.Amount = (_Leverage* BaseWallet.amount>_MaximumSize?_MaximumSize:BaseWallet.amount / LastTick.Last).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Long;
             }
             else
@@ -289,7 +289,7 @@ namespace WhiteCow.Broker
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (_Leverage* BaseWallet.amount / LastTick.Last).ToString();
+                request.Amount = (_Leverage* BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount / LastTick.Last).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Short;
             }
             else
@@ -397,6 +397,8 @@ namespace WhiteCow.Broker
             }
             return Fees[BaseWallet.currency];
 		}
+
+       
         #endregion
     }
 }

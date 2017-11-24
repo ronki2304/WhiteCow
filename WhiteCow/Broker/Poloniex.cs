@@ -177,7 +177,7 @@ namespace WhiteCow.Broker
 			var orderbook = returnMarketOrderBook(20);
 
 			//convert to the target currency because this is amount required in target currency for all exchange
-			Double amount = BaseWallet.amount;
+			Double amount = BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount;
 			int i = -1;
 			while (amount > 0.02)
 			{
@@ -211,7 +211,7 @@ namespace WhiteCow.Broker
 			var orderbook = returnMarketOrderBook(20);
 
 			//convert to the target currency because this is amount required in target currency for all exchange
-			Double amount = BaseWallet.amount;
+			Double amount = BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount;
 			int i = -1;
 			while (amount > 0.02)
 			{
@@ -340,6 +340,26 @@ namespace WhiteCow.Broker
                 return false;
             RefreshWallet();
             return true;
+        }
+
+        public override Boolean CheckReceiveFund(Double amount)
+        {
+            Double oldAmount = ExchangeBaseWallet.amount;
+
+			while (ExchangeBaseWallet.amount == oldAmount)
+			{
+				Console.WriteLine("funds not received for wait 3 min again");
+				//wait 3 minuts
+				Thread.Sleep(180000);
+				oldAmount = ExchangeBaseWallet.amount;
+				RefreshWallet();
+
+			}
+            Console.WriteLine("fund received transfer them");
+            TransferFund(PoloniexAccountType.exchange,PoloniexAccountType.margin,amount);
+
+            return true;
+
         }
         #endregion
 
