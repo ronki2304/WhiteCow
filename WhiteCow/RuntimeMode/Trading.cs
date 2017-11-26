@@ -4,9 +4,14 @@ using System.Threading;
 using WhiteCow.Broker;
 using WhiteCow.Interface;
 using WhiteCow.Entities.Trading;
+using WhiteCow.Log;
 
 namespace WhiteCow.RuntimeMode
 {
+    /// <summary>
+    /// the power of white cow
+    /// here is the trading intelligence
+    /// </summary>
     public class Trading:IRuntimeMode
     {
         readonly Double ThresholdGap;
@@ -21,9 +26,12 @@ namespace WhiteCow.RuntimeMode
         /// </summary>
         public void StartToMooh()
 		{
+            Logger.Instance.LogInfo("Start mooh trading");
             BitFinex btx = new BitFinex();
             btx.Account_info();
-			//TickGapAnalisys();
+			
+            //while(true)
+            //TickGapAnalisys();
 		}
 
 		/// <summary>
@@ -32,6 +40,7 @@ namespace WhiteCow.RuntimeMode
 		/// </summary>
 		private void TickGapAnalisys()
 		{
+            Logger.Instance.LogInfo("Tick analysis");
             Step = TradingStep.Tick;
 			Poloniex polo = new Poloniex();
 			BitFinex btx = new BitFinex();
@@ -50,10 +59,13 @@ namespace WhiteCow.RuntimeMode
 					continue;
 
 				if (polo.LastTick.Last > btx.LastTick.Last)
-					gap = polo.LastTick.Last / btx.LastTick.Last - 100.0;
+					gap =100 * polo.LastTick.Last / btx.LastTick.Last - 100.0;
 				else
-					gap = btx.LastTick.Last / polo.LastTick.Last - 100.0;
+					gap = 100* btx.LastTick.Last / polo.LastTick.Last - 100.0;
 			} while (gap < ThresholdGap);
+
+            Logger.Instance.LogInfo("Gap is large enough take position");
+            Logger.Instance.LogInfo($"Gap is {gap}");
 
 			if (polo.LastTick.Last > btx.LastTick.Last)
 				SetPosition(btx, polo);
@@ -68,9 +80,11 @@ namespace WhiteCow.RuntimeMode
 		/// <param name="BrHigh">low broker ticker</param>
 		private void SetPosition(Broker.Broker Brlow, Broker.Broker BrHigh)
 		{
+            Logger.Instance.LogInfo("taking position..");
             Step = TradingStep.OpenPosition;
 			Brlow.MarginBuy();
 			BrHigh.MarginSell();
+            Logger.Instance.LogInfo("Position done");
 			ClosePosition(Brlow, BrHigh);
 		}
 		/// <summary>
@@ -80,6 +94,7 @@ namespace WhiteCow.RuntimeMode
 		/// <param name="BrHigh">low broker ticker</param>
 		private void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh)
 		{
+            Logger.Instance.LogInfo("Now Waiting for the cross");
             Step = TradingStep.ClosePosition;
 			do
 			{
@@ -90,10 +105,13 @@ namespace WhiteCow.RuntimeMode
 
 				if (BrHigh.LastTick == null)
 					continue;
-			} while (BrHigh.LastTick.Last / Brlow.LastTick.Last - 100 > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
+			} while (100 * BrHigh.LastTick.Last / Brlow.LastTick.Last - 100 > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
 
 			BrHigh.ClosePosition();
 			Brlow.ClosePosition();
+
+            Logger.Instance.LogInfo("position closed");
+            EquilibrateFund(Brlow,BrHigh);
 		}
 		/// <summary>
 		/// Reequilibrate all broker
@@ -102,6 +120,7 @@ namespace WhiteCow.RuntimeMode
 		/// <param name="BrHigh">low broker ticker</param>
 		private void EquilibrateFund(Broker.Broker Brlow, Broker.Broker BrHigh)
 		{
+            Logger.Instance.LogInfo("Now transfer extra amount to reequilibrate");
             Step = TradingStep.FundTransfer;
             Brlow.RefreshWallet();
             BrHigh.RefreshWallet();
@@ -121,6 +140,7 @@ namespace WhiteCow.RuntimeMode
                 BrHigh.Send(Brlow._PublicAddress, amountToTransfer);
                 Brlow.CheckReceiveFund(amountToTransfer);
             }
+            Logger.Instance.LogInfo($"full loop done {Environment.NewLine}Now go back to ticker analysis");
             
 		}
 
