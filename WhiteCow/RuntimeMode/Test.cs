@@ -29,7 +29,7 @@ namespace WhiteCow.RuntimeMode
             Console.WriteLine("Test with bitfinex press enter to start");
             Console.ReadLine();
             procedure("bitfinex",btx);
-
+             
             Console.WriteLine("Now test with Poloniex press enter to start");
             Console.ReadLine();
             procedure("poloniex",polo);

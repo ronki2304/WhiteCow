@@ -117,7 +117,7 @@ namespace WhiteCow.RuntimeMode
 			BrHigh.ClosePosition();
 			Brlow.ClosePosition();
 
-            Logger.Instance.LogInfo("position closed");
+            Logger.Instance.LogInfo("position closed"); 
 
             EquilibrateFund(Brlow,BrHigh);
 		}
