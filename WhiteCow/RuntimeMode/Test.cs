@@ -34,7 +34,7 @@ namespace WhiteCow.RuntimeMode
             Console.ReadLine();
             procedure("poloniex",polo);
         }
-
+         
         private void procedure(String Market,Broker.Broker broker)
         {
             
