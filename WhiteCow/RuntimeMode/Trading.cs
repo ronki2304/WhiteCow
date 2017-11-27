@@ -26,12 +26,9 @@ namespace WhiteCow.RuntimeMode
         /// </summary>
         public void StartToMooh()
 		{
-            Logger.Instance.LogInfo("Start mooh trading");
-            BitFinex btx = new BitFinex();
-            btx.Account_info();
-			
+            
             //while(true)
-            //TickGapAnalisys();
+            TickGapAnalisys();
 		}
 
 		/// <summary>
@@ -44,11 +41,13 @@ namespace WhiteCow.RuntimeMode
             Step = TradingStep.Tick;
 			Poloniex polo = new Poloniex();
 			BitFinex btx = new BitFinex();
-
+            ClosePosition(polo, btx);
+            return;
 			//tick analisys
 			Double gap = 0.0;
 			do
 			{
+				Logger.Instance.LogInfo("Gap is not enough wait 10sec");
 				Thread.Sleep(10000);
 
 				if (polo.LastTick == null)
@@ -62,10 +61,11 @@ namespace WhiteCow.RuntimeMode
 					gap =100 * polo.LastTick.Last / btx.LastTick.Last - 100.0;
 				else
 					gap = 100* btx.LastTick.Last / polo.LastTick.Last - 100.0;
+
+                Logger.Instance.LogInfo($"Gap is {gap}");
 			} while (gap < ThresholdGap);
 
             Logger.Instance.LogInfo("Gap is large enough take position");
-            Logger.Instance.LogInfo($"Gap is {gap}");
 
 			if (polo.LastTick.Last > btx.LastTick.Last)
 				SetPosition(btx, polo);
@@ -96,8 +96,11 @@ namespace WhiteCow.RuntimeMode
 		{
             Logger.Instance.LogInfo("Now Waiting for the cross");
             Step = TradingStep.ClosePosition;
+            double gap = Double.NaN;
 			do
 			{
+				Logger.Instance.LogInfo($"Gap is is too large retry");
+
 				Thread.Sleep(10000);
 
 				if (Brlow.LastTick == null)
@@ -105,12 +108,17 @@ namespace WhiteCow.RuntimeMode
 
 				if (BrHigh.LastTick == null)
 					continue;
-			} while (100 * BrHigh.LastTick.Last / Brlow.LastTick.Last - 100 > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
+
+                gap = 100 * BrHigh.LastTick.Last / Brlow.LastTick.Last - 100;
+				Logger.Instance.LogInfo($"Gap is {gap}");
+
+			} while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
 
 			BrHigh.ClosePosition();
 			Brlow.ClosePosition();
 
             Logger.Instance.LogInfo("position closed");
+
             EquilibrateFund(Brlow,BrHigh);
 		}
 		/// <summary>
