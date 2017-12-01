@@ -3,10 +3,22 @@
 - I like to mooh
 - Let's mooh it
 
+## disclaimer
+You use this tool at your own risk, You are the only one responsible for looses.
+
+# Process
+to complete
+## Supported Broker for trading :
+- BitFinex
+- Poloniex
 ## Installation
 ### Pre-requisite
+### IT
 - monocompile
 
+### Broker
+- For Poloniex you need to have an account with an api that have enable trading **and withdraw**
+- For Bitfinex you need to have an account with the [greenlane](https://www.bitfinex.com/withdraw/greenlane) enable
 ## Installation For Raspberry
 ```
 git clone https://github.com/ronki2304/WhiteCow.git
@@ -36,3 +48,6 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 ```
+
+### update configuration settings
+modify the file WhiteCow.exe.config
