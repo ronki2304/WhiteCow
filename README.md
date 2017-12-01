@@ -14,7 +14,7 @@ to complete
 ## Installation
 ### Pre-requisite
 ### IT
-- monocompile
+- mono-complete
 
 ### Broker
 - For Poloniex you need to have an account with an api that have enable trading **and withdraw**
