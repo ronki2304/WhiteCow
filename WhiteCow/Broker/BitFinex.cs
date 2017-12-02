@@ -166,37 +166,47 @@ namespace WhiteCow.Broker
                 Logger.Instance.LogWarning("Bitfinex Refresh wallet failed");
                 return false;
             }
-            output = output.Substring(1, output.Length - 2);
 
-            //split by array
-            var Wallets = output.Split(new[] { "],[" }, StringSplitOptions.None).ToList();
-            Wallets[0] = Wallets[0].Substring(1);
-            Wallets[Wallets.Count - 1] = Wallets[Wallets.Count - 1].Substring(0, Wallets[Wallets.Count - 1].Length - 2);
-
-            //clean data
-            for (int i = 0; i < Wallets.Count; i++)
+            if (output == "[]")
             {
-                Wallets[i] = Wallets[i].Replace("\"", "");
+				//when poor people run WhiteCow whitout fund like Mick
+				BaseWallet.amount = 0.0;
+				QuoteWallet.amount = 0.0;
             }
-            //refresh amount
-            //base
-            var wal = Wallets.FirstOrDefault(p => p.StartsWith($"margin,{BaseWallet.currency}", StringComparison.InvariantCulture));
-            if (String.IsNullOrEmpty(wal))
-                BaseWallet.amount = 0.0;
             else
-                BaseWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
-            Console.WriteLine($"Base wallet new amount : {BaseWallet.amount}");
-            //quote 
-            wal = Wallets.FirstOrDefault(p => p.StartsWith($"margin,{QuoteWallet.currency}", StringComparison.InvariantCulture));
+            {
+                output = output.Substring(1, output.Length - 2);
 
-            if (String.IsNullOrEmpty(wal))
-                QuoteWallet.amount = 0.0;
-            else
-                QuoteWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
-            Console.WriteLine($"Quote wallet new amount : {QuoteWallet.amount}");
-            IsInError = false;
-            Logger.Instance.LogInfo("Bitfinex Refresh wallet succeeded");
-            return true;
+                //split by array
+                var Wallets = output.Split(new[] { "],[" }, StringSplitOptions.None).ToList();
+                Wallets[0] = Wallets[0].Substring(1);
+                Wallets[Wallets.Count - 1] = Wallets[Wallets.Count - 1].Substring(0, Wallets[Wallets.Count - 1].Length - 2);
+
+                //clean data
+                for (int i = 0; i < Wallets.Count; i++)
+                {
+                    Wallets[i] = Wallets[i].Replace("\"", "");
+                }
+                //refresh amount
+                //base
+                var wal = Wallets.FirstOrDefault(p => p.StartsWith($"margin,{BaseWallet.currency}", StringComparison.InvariantCulture));
+                if (String.IsNullOrEmpty(wal))
+                    BaseWallet.amount = 0.0;
+                else
+                    BaseWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
+                Console.WriteLine($"Base wallet new amount : {BaseWallet.amount}");
+                //quote 
+                wal = Wallets.FirstOrDefault(p => p.StartsWith($"margin,{QuoteWallet.currency}", StringComparison.InvariantCulture));
+
+                if (String.IsNullOrEmpty(wal))
+                    QuoteWallet.amount = 0.0;
+                else
+                    QuoteWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
+                Console.WriteLine($"Quote wallet new amount : {QuoteWallet.amount}");
+                IsInError = false;
+                Logger.Instance.LogInfo("Bitfinex Refresh wallet succeeded");
+                return true;
+            }
         }
 
         public String ListOpenPositions()
