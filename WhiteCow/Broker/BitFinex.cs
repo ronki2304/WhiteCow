@@ -172,6 +172,7 @@ namespace WhiteCow.Broker
 				//when poor people run WhiteCow whitout fund like Mick
 				BaseWallet.amount = 0.0;
 				QuoteWallet.amount = 0.0;
+                return true;
             }
             else
             {
