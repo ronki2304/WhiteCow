@@ -307,7 +307,7 @@ namespace WhiteCow.Broker
 
 			String PostData = "command=returnAvailableAccountBalances&nonce=" + DateTime.Now.getUnixMilliTime();
 
-            var balances = PoloniexAvailableAccountBalance.FromJson(Post(PostData));
+            var response =Post(PostData);
 
 
             if (IsInError)
@@ -316,25 +316,36 @@ namespace WhiteCow.Broker
                 return false;
             }
 
-
-            //spolit to retrieve the different balance
-            if (balances.margin != null && balances.margin.ContainsKey(BaseWallet.currency))
-                BaseWallet.amount = Convert.ToDouble(balances.margin[BaseWallet.currency]);
-            else
+            if (response == "[]")
+            {
+                //when people run WhiteCow whitout fund
                 BaseWallet.amount = 0.0;
-
-            if (balances.margin != null && balances.margin.ContainsKey(QuoteWallet.currency))
-                QuoteWallet.amount = Convert.ToDouble(balances.margin[QuoteWallet.currency]);
-            else
                 QuoteWallet.amount = 0.0;
-
-            if (balances.exchange != null && balances.exchange.ContainsKey(BaseWallet.currency))
-                ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[BaseWallet.currency]);
-            else
                 ExchangeBaseWallet.amount = 0.0;
+                return true;
+            }
+            else
+            {
+                var balances = PoloniexAvailableAccountBalance.FromJson(response);
+                //split to retrieve the different balance
+                if (balances.margin != null && balances.margin.ContainsKey(BaseWallet.currency))
+                    BaseWallet.amount = Convert.ToDouble(balances.margin[BaseWallet.currency]);
+                else
+                    BaseWallet.amount = 0.0;
 
-            Logger.Instance.LogInfo($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Quote wallet amount {QuoteWallet.amount}{Environment.NewLine} Exchange base wallet : {ExchangeBaseWallet.amount}");
-            return true;
+                if (balances.margin != null && balances.margin.ContainsKey(QuoteWallet.currency))
+                    QuoteWallet.amount = Convert.ToDouble(balances.margin[QuoteWallet.currency]);
+                else
+                    QuoteWallet.amount = 0.0;
+
+                if (balances.exchange != null && balances.exchange.ContainsKey(BaseWallet.currency))
+                    ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[BaseWallet.currency]);
+                else
+                    ExchangeBaseWallet.amount = 0.0;
+
+                Logger.Instance.LogInfo($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Quote wallet amount {QuoteWallet.amount}{Environment.NewLine} Exchange base wallet : {ExchangeBaseWallet.amount}");
+                return true;
+            }
         }
 
         public override bool Send(string DestinationAddress, double Amount)
