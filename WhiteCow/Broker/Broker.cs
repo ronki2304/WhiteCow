@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading;
 using WhiteCow.Entities;
 using WhiteCow.Entities.Trading;
+using WhiteCow.Extension;
 
 namespace WhiteCow.Broker
 {
@@ -49,16 +50,20 @@ namespace WhiteCow.Broker
         {
             get
             {
-                if (DateTime.Now.AddSeconds(-1) >= LastTickCalled)
+                if (_LastTick==null || DateTime.Now.AddSeconds(-1).getUnixMilliTime()-_LastTick.Timestamp>=1000 )
                 {
-                    LastTickCalled = DateTime.Now;
-                    _LastTick = GetTick();
+                    do
+                    {
+                        _LastTick = GetTick();
+                        if (_LastTick == null)
+                            Thread.Sleep(100);
+                    }
+                    while (IsInError);
                 }
                 return _LastTick;
             }
         }
 
-        DateTime LastTickCalled;
         Ticker _LastTick;
         #endregion
 
@@ -97,7 +102,6 @@ namespace WhiteCow.Broker
 
             Position = PositionTypeEnum.Out;
             IsInError = false;
-            LastTickCalled = DateTime.Now;
             NbPostCall = new SynchronizedCollection<DateTime>();
 
             if (_Leverage < 1.0)
@@ -166,6 +170,34 @@ namespace WhiteCow.Broker
                 else
                     Thread.Sleep(1000);
             }
+        }
+
+        protected String HttpGet(String address)
+        {
+            IsInError = false;
+            String Response = String.Empty;
+            using (WebClient client = new WebClient())
+            {
+                while (String.IsNullOrEmpty(Response))
+                {
+                    try
+                    {
+                        Response = client.DownloadString(address);
+                    }
+                    catch (TimeoutException tex)
+                    {
+                        Log.Logger.Instance.LogWarning($"Warning hhtp get for {address} has timed out  : {tex.Message}");
+                        Thread.Sleep(500);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Logger.Instance.LogError($"Http get error : {address}");
+                        Log.Logger.Instance.LogError(ex);
+                           IsInError = true;
+                    }
+                }
+             }
+            return Response;
         }
 
         /// <summary>

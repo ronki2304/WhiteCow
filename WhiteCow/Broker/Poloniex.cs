@@ -43,36 +43,39 @@ namespace WhiteCow.Broker
         /// <param name="PostData">Post data.</param>
         private String Post(String PostData)
         {
+            IsInError = false;
             Logger.Instance.LogInfo($"Poloniex post data : {PostData}");
-            WebClient client = new WebClient();
-            client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
-            client.Headers["key"] = _Key;
-            client.Headers["Sign"] = EncryptPost(PostData, new HMACSHA512());
-
-            Int16 PostTry = 0;
-            while (PostTry < 3)
+            using (WebClient client = new WebClient())
             {
-                try
+                client.Headers[HttpRequestHeader.ContentType] = "application/x-www-form-urlencoded";
+                client.Headers["key"] = _Key;
+                client.Headers["Sign"] = EncryptPost(PostData, new HMACSHA512());
+
+                Int16 PostTry = 0;
+                while (PostTry < 3)
                 {
-                    AuthorizePost();
-                    String content = client.UploadString(_PostUrl, "POST", PostData);
-                    Logger.Instance.LogInfo("Poloniex post result : " + content);
-                    return content;
-                }
-                catch (Exception ex)
-                {
-                    Logger.Instance.LogWarning("Poloniex Post exception occured :");
-                    Logger.Instance.LogWarning(ex.ToString());
-                    if (PostTry >= 3)
+                    try
                     {
-                        IsInError = true;
-                        Logger.Instance.LogError("Poloniex Post exception occured :");
-                        Logger.Instance.LogError(ex.ToString());
-                        return "error";
+                        AuthorizePost();
+                        String content = client.UploadString(_PostUrl, "POST", PostData);
+                        Logger.Instance.LogInfo("Poloniex post result : " + content);
+                        return content;
                     }
-                    PostTry++;
-                    //wait 5 secondes before retrying
-                    Thread.Sleep(5000);
+                    catch (Exception ex)
+                    {
+                        Logger.Instance.LogWarning("Poloniex Post exception occured :");
+                        Logger.Instance.LogWarning(ex.ToString());
+                        if (PostTry >= 3)
+                        {
+                            IsInError = true;
+                            Logger.Instance.LogError("Poloniex Post exception occured :");
+                            Logger.Instance.LogError(ex.ToString());
+                            return "error";
+                        }
+                        PostTry++;
+                        //wait 5 secondes before retrying
+                        Thread.Sleep(5000);
+                    }
                 }
             }
             return String.Empty;
@@ -88,15 +91,18 @@ namespace WhiteCow.Broker
         /// <returns>The tick.</returns>
         protected override Ticker GetTick()
         {
-            String address = _GetUrl + "/public?command=returnTicker";
+			Logger.Instance.LogInfo("Poloniex Get Tick start");
+
+			String address = _GetUrl + "/public?command=returnTicker";
             WebClient client = new WebClient();
 
-            var content = client.DownloadString(address);
+            var content = HttpGet(address);
 
-            if (String.IsNullOrEmpty(content))
+            if (IsInError)
             {
-                Logger.Instance.LogWarning("Poloniex : ticker time out");
-                return null;
+				Logger.Instance.LogInfo("Poloniex Get Tick end with error");
+
+				return null;
             }
             var poloticker = PoloniexTicker.FromJson(content);
 
@@ -107,7 +113,11 @@ namespace WhiteCow.Broker
             otick.Low = poloticker[_Pair].Low24hr;
             otick.High = poloticker[_Pair].High24hr;
             otick.Volume = poloticker[_Pair].BaseVolume;
-            return otick;
+            otick.Timestamp = DateTime.Now.getUnixMilliTime();
+
+			Logger.Instance.LogInfo("Poloniex Get Tick end");
+
+			return otick;
 
         }
         /// <summary>
@@ -118,8 +128,14 @@ namespace WhiteCow.Broker
         {
             Logger.Instance.LogInfo("Poloniex Average Yield started");
             String address = _GetUrl + $"/public?command=returnLoanOrders&currency={BaseWallet.currency}";
-            WebClient client = new WebClient();
-            var lend = PoloniexLendInfo.FromJson(client.DownloadString(address));
+            var content = HttpGet(address);
+            if (IsInError)
+            {
+				Logger.Instance.LogInfo("Poloniex Average Yield end with error");
+
+				return Double.NaN;
+            }
+            var lend = PoloniexLendInfo.FromJson(content);
             Logger.Instance.LogInfo("Poloniex Average Yield end");
             return lend.Offers.Average(p => p.Rate);
 
@@ -127,16 +143,26 @@ namespace WhiteCow.Broker
 
         private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth)
         {
-            String url = String.Concat(_GetUrl
+			Logger.Instance.LogInfo("Poloniex retur Larket Order Book start");
+
+			String url = String.Concat(_GetUrl
                 , "/public?command=returnOrderBook&currencyPair="
                 , _Pair
                 , "&depth="
                 , depth);
 
-            WebClient client = new WebClient();
+          
 
-            var content = client.DownloadString(url);
-            return PoloniexMarketOrderBook.FromJson(content);
+            var content = HttpGet(url);
+            if (IsInError)
+            {
+				Logger.Instance.LogInfo("Poloniex retur Larket Order Book end with errors");
+
+				return null;
+            }
+			Logger.Instance.LogInfo("Poloniex retur Larket Order Book end");
+
+			return PoloniexMarketOrderBook.FromJson(content);
 
 
         }
@@ -147,19 +173,17 @@ namespace WhiteCow.Broker
             {
                 
 				Logger.Instance.LogInfo("Poloniex Call WithDraw fees started");
-                do
-                {
+               
                     String url = String.Concat(_GetUrl, "/public?command=returnCurrencies");
 
-                    WebClient client = new WebClient();
+                 
+                    var content =  HttpGet(url);
 
-                    var content = client.DownloadString(url);
-
-                    if (String.IsNullOrEmpty(content))
+                if (IsInError)
                     {
-                        IsInError = true;
-                        Logger.Instance.LogWarning("Poloniex Call WithDraw fee failed");
-                        continue;
+                    Logger.Instance.LogInfo("Poloniex Call WithDraw fees ended with error");
+                    return Double.NaN;
+                     
                     }
                     var currencies = PoloniexCurrencyInfos.FromJson(content);
 
@@ -169,8 +193,7 @@ namespace WhiteCow.Broker
                     {
                         Fees.Add(key, currencies[key].TxFee);
                     }
-					IsInError = false;
-                } while (IsInError);
+					
 			}
         
 			Logger.Instance.LogInfo("Poloniex Call WithDraw fees ended");

@@ -26,92 +26,97 @@ namespace WhiteCow.Broker
         #region private 
         private String PostV1(string apiPath, BitfinexPostBase request)
         {
+            IsInError = false;
             Logger.Instance.LogInfo($"Bitfinex Post V1 selected for the method {apiPath}");
             String body64 = Base64Encode(request.serialize());
             String address = _PostUrl + apiPath;
-            WebClient client = new WebClient();
-            client.Headers["X-BFX-APIKEY"] = _Key;
-            client.Headers["X-BFX-PAYLOAD"] = body64;
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers["X-BFX-SIGNATURE"] = EncryptPost(body64, new HMACSHA384());
-
-            Int16 PostTry = 0;
-            while (PostTry < 3)
+            using (WebClient client = new WebClient())
             {
-                try
-                {
-                    AuthorizePost();
-                    String response = client.UploadString(address, request.serialize());
-                    Logger.Instance.LogInfo(String.Concat("Response is : ", response));
-                    IsInError = false;
-                    return response;
-                }
-                catch (Exception ex)
-                {
-                    Logger.Instance.LogWarning($"Post V1 for {apiPath} exception occured :");
-                    Logger.Instance.LogWarning(ex.ToString());
-                    if (PostTry >= 3)
-                    {
-                        IsInError = true;
-                        Logger.Instance.LogError($"Post V1 for {apiPath} exception occured :");
-						Logger.Instance.LogError(ex);
+                client.Headers["X-BFX-APIKEY"] = _Key;
+                client.Headers["X-BFX-PAYLOAD"] = body64;
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                client.Headers["X-BFX-SIGNATURE"] = EncryptPost(body64, new HMACSHA384());
 
-						return "error";
+                Int16 PostTry = 0;
+                while (PostTry < 3)
+                {
+                    try
+                    {
+                        AuthorizePost();
+                        String response = client.UploadString(address, request.serialize());
+                        Logger.Instance.LogInfo(String.Concat("Response is : ", response));
+                        IsInError = false;
+                        return response;
                     }
-                    PostTry++;
-                    //wait 5 secondes before retrying
-                    Thread.Sleep(5000);
+                    catch (Exception ex)
+                    {
+                        Logger.Instance.LogWarning($"Post V1 for {apiPath} exception occured :");
+                        Logger.Instance.LogWarning(ex.ToString());
+                        if (PostTry >= 3)
+                        {
+                            IsInError = true;
+                            Logger.Instance.LogError($"Post V1 for {apiPath} exception occured :");
+                            Logger.Instance.LogError(ex);
+
+                            return "error";
+                        }
+                        PostTry++;
+                        //wait 5 secondes before retrying
+                        Thread.Sleep(5000);
+                    }
                 }
             }
-
             return String.Empty;
 
         }
         private String PostV2(string apiPath, String body, long nonce)
         {
+            IsInError = false;
 			Logger.Instance.LogInfo($"Bitfinex Post V2 selected for the method {apiPath}");
             String address = _PostUrl + apiPath;
 
-            WebClient client = new WebClient();
-
-            client.Headers["bfx-apikey"] = _Key;
-            client.Headers["bfx-nonce"] = nonce.ToString();
-            client.Headers[HttpRequestHeader.ContentType] = "application/json";
-            client.Headers["bfx-signature"] = EncryptPost($"/api{apiPath}{nonce}{body}", new HMACSHA384());
-
-            Int16 PostTry = 0;
-            String output = String.Empty;
-            while (PostTry < 3)
+            using (WebClient client = new WebClient())
             {
-                try
-                {
-                    AuthorizePost();
-                    output = client.UploadString(address, body);
-                    Logger.Instance.LogInfo(String.Concat("Response is : ",output));
-                    break;
 
-                }
-                catch (Exception ex)
+                client.Headers["bfx-apikey"] = _Key;
+                client.Headers["bfx-nonce"] = nonce.ToString();
+                client.Headers[HttpRequestHeader.ContentType] = "application/json";
+                client.Headers["bfx-signature"] = EncryptPost($"/api{apiPath}{nonce}{body}", new HMACSHA384());
+
+                Int16 PostTry = 0;
+                String output = String.Empty;
+                while (PostTry < 3)
                 {
-                    Logger.Instance.LogWarning($"Post V2 for {apiPath} exception occured :");
-                    Logger.Instance.LogWarning(ex.ToString());
-                    if (PostTry >= 3)
+                    try
                     {
-                        IsInError = true;
-                        Logger.Instance.LogError($"Post V2 for {apiPath} exception occured :");
-						Logger.Instance.LogError(ex);
-                        return "error";
-                    }
-                    PostTry++;
-                    //wait 5 secondes before retrying
-                    Thread.Sleep(5000);
-                }
-            }
+                        AuthorizePost();
+                        output = client.UploadString(address, body);
+                        Logger.Instance.LogInfo(String.Concat("Response is : ", output));
+                        break;
 
-            if (String.IsNullOrEmpty(output))
-                IsInError = true;
-            
-            return output;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Instance.LogWarning($"Post V2 for {apiPath} exception occured :");
+                        Logger.Instance.LogWarning(ex.ToString());
+                        if (PostTry >= 3)
+                        {
+                            IsInError = true;
+                            Logger.Instance.LogError($"Post V2 for {apiPath} exception occured :");
+                            Logger.Instance.LogError(ex);
+                            return "error";
+                        }
+                        PostTry++;
+                        //wait 5 secondes before retrying
+                        Thread.Sleep(5000);
+                    }
+                }
+
+                if (String.IsNullOrEmpty(output))
+                    IsInError = true;
+
+                return output;
+            }
         }
         #endregion
 
@@ -122,15 +127,17 @@ namespace WhiteCow.Broker
         /// <returns>The tick.</returns>
         protected override Ticker GetTick()
         {
-            //System.Security.Cryptography.AesCryptoServiceProvider b = new System.Security.Cryptography.AesCryptoServiceProvider();
-            String address = _GetUrl + "/v2/ticker/t" + _Pair;
-            WebClient client = new WebClient();
-            var content = client.DownloadString(address);
+			Logger.Instance.LogInfo("BitFinex Get Tick start");
 
-            if (String.IsNullOrEmpty(content))
+			String address = _GetUrl + "/v2/ticker/t" + _Pair;
+         
+            var content = HttpGet(address);
+
+            if (IsInError)
             {
-                Logger.Instance.LogWarning("Bitfinex : ticker time out");
-                return null;
+				Logger.Instance.LogInfo("BitFinex Get Tick end with error");
+
+				return null;
             }
 
             Ticker tick = new Ticker();
@@ -141,10 +148,11 @@ namespace WhiteCow.Broker
             tick.Low = Convert.ToDouble(listParam[9].Replace("]", String.Empty));
             tick.High = Convert.ToDouble(listParam[8]);
             tick.Volume = Convert.ToDouble(listParam[7]);
-            tick.Timestamp = DateTime.Now.getUnixTime();
+            tick.Timestamp = DateTime.Now.getUnixMilliTime();
 
+			Logger.Instance.LogInfo("BitFinex Get Tick end");
 
-            return tick;
+			return tick;
         }
         #endregion
 

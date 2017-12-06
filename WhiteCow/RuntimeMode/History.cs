@@ -24,7 +24,7 @@ namespace WhiteCow.RuntimeMode
 			btx = new BitFinex();
 
 			Console.WriteLine("History mode enable");
-			String Header = "Date;Bitfinex;Cex.io;Poloniex";
+			String Header = "Date;Bitfinex;Poloniex";
 			if (!File.Exists(fileName))
 				File.AppendAllText(fileName, Header + Environment.NewLine);
 
@@ -35,29 +35,15 @@ namespace WhiteCow.RuntimeMode
         public void GenerateHistory(object state)
 		{
 			
-			String bitfinextick, cextick, polotick;
+		   //check if we have a troube to connect to get services
+            //broker have multiple issues per day
+            // if the time gap is too large the data are inefficient
+            if (Math.Abs(polo.LastTick.Timestamp - btx.LastTick.Timestamp) >= 4000)
+                return;
 
-			    var btfTicker = btx.LastTick;
-			if (btfTicker != null)
-			    bitfinextick = btfTicker.Last.ToString();
-			else
-			    bitfinextick = String.Empty;
-			try
-			{
-			    var cexTicker = CexIO.GetTick(ConfigurationManager.AppSettings["Cex.io.Pair"]);
-			    cextick = cexTicker.Last.ToString();
-			}
-			catch
-			{ cextick = String.Empty; }
+            String content = $"{DateTime.Now.ToString()};{btx.LastTick.Last};{polo.LastTick.Last}";
+           
 
-
-			    var PoloTicker = polo.LastTick;
-			    if (PoloTicker != null)
-			        polotick = PoloTicker.Last.ToString();
-			    else
-			        polotick = String.Empty;
-
-			String content = $"{DateTime.Now.ToString()};{bitfinextick};{cextick};{polotick}";
 			Console.WriteLine(content);
 
 			File.AppendAllText(fileName, content + Environment.NewLine);

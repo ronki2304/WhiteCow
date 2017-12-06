@@ -41,8 +41,7 @@ namespace WhiteCow.RuntimeMode
             Step = TradingStep.Tick;
 			Poloniex polo = new Poloniex();
 			BitFinex btx = new BitFinex();
-            ClosePosition(polo, btx);
-            return;
+           
 			//tick analisys
 			Double gap = 0.0;
 			do
