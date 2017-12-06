@@ -203,7 +203,7 @@ namespace WhiteCow.Broker
                     BaseWallet.amount = 0.0;
                 else
                     BaseWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
-                Console.WriteLine($"Base wallet new amount : {BaseWallet.amount}");
+                Logger.Instance.LogInfo($"Bitfinex Base wallet new amount : {BaseWallet.amount}");
                 //quote 
                 wal = Wallets.FirstOrDefault(p => p.StartsWith($"margin,{QuoteWallet.currency}", StringComparison.InvariantCulture));
 
@@ -211,7 +211,7 @@ namespace WhiteCow.Broker
                     QuoteWallet.amount = 0.0;
                 else
                     QuoteWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
-                Console.WriteLine($"Quote wallet new amount : {QuoteWallet.amount}");
+                Logger.Instance.LogInfo($"Bitfinex Quote wallet new amount : {QuoteWallet.amount}");
                 IsInError = false;
                 Logger.Instance.LogInfo("Bitfinex Refresh wallet succeeded");
                 return true;

@@ -22,8 +22,19 @@ namespace WhiteCow
 #if DEBUG
         public static void Main(String[] args)
         {
-            (new TicToc()).OnStart(new string[1]);
-            ServiceBase.Run(new TicToc());
+            if (args.Length == 0)
+            {
+                (new TicToc()).OnStart(new string[1]);
+                ServiceBase.Run(new TicToc());
+            }
+            else if (args[0] == "Test")
+            {
+                using (Test test = new Test())
+                {
+                    test.StartToMooh();
+                }
+            }
+
             Console.ReadLine();
 
         }
@@ -34,11 +45,10 @@ namespace WhiteCow
             WhiteCowMode servicemode = (WhiteCowMode)Enum.Parse(typeof(WhiteCowMode), ConfigurationManager.AppSettings["Mode"]);
 
 
-
             switch (servicemode)
             {
                 case WhiteCowMode.History:
-                    engine= new History();
+                    engine = new History();
 
                     break;
                 case WhiteCowMode.Runtime:
@@ -56,13 +66,13 @@ namespace WhiteCow
 
 
         }
-       
+
 
         protected override void OnStop()
         {
             engine.Dispose();
         }
 
-       
+
     }
 }

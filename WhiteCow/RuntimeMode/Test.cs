@@ -20,7 +20,8 @@ namespace WhiteCow.RuntimeMode
             Logger.Instance.LogInfo("test mode started");
             Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
-
+           
+            Console.Clear();
 			Console.WriteLine("test procedure to check if all thing are ok");
 			Console.WriteLine("please note that procedure will put order and withdraw");
 			Console.WriteLine("So you will have to pay the fees");
@@ -37,28 +38,32 @@ namespace WhiteCow.RuntimeMode
          
         private void procedure(String Market,Broker.Broker broker)
         {
-            
+            Console.Clear();
             Console.WriteLine($"{Market} : Check tick data");
             Console.WriteLine($"{Market} : The last tick is {broker.LastTick.Last}");
 
             Console.WriteLine("press enter to continue if ok");
             Console.ReadLine();
 
+            Console.Clear();
             Console.WriteLine($"{Market} : Check wallet account");
             broker.RefreshWallet();
             Console.WriteLine($"{Market} : the margin account have : {broker.BaseWallet.amount}");
 			Console.ReadLine();
 
+            Console.Clear();
 			Console.WriteLine($"{Market} : Put a margin short order");
             broker.MarginSell();
             Console.WriteLine($"{Market} : Short order posted please heck on your account if you can see it");
             Console.ReadLine();
 
+            Console.Clear();
             Console.WriteLine($"{Market} : Closing the short order....");
             broker.ClosePosition();
             Console.WriteLine($"{Market} : The short order is now closed please check your account");
             Console.ReadLine();
 
+            Console.Clear();
             Console.WriteLine($"{Market} : Sending coins");
             Console.WriteLine($"{Market} : How any do you want to send ?");
             Double amount = Double.Parse(Console.ReadLine());

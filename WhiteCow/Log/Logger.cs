@@ -38,7 +38,7 @@ namespace WhiteCow.Log
             if (!Directory.Exists("Log"))
                Directory.CreateDirectory("Log");
 
-            File.AppendAllText($"Log\\{DateTime.Now.ToString("yyyyMMdd")}_Log.txt",String.Concat(
+            File.AppendAllText(Path.Combine("Log",$"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"),String.Concat(
                 DateTime.Now," ",Message,Environment.NewLine));
         }
 
