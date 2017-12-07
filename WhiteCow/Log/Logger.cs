@@ -1,6 +1,6 @@
 ﻿using System;
 using System.IO;
-
+using System.Collections;
 namespace WhiteCow.Log
 {
     /// <summary>
@@ -10,10 +10,11 @@ namespace WhiteCow.Log
     {
 		private static volatile Logger instance;
 		private static object syncRoot = new Object();
-
+        private Queue msgQueue;
 
         private Logger()
         {
+            msgQueue = new Queue();
         }
 
         public static Logger Instance
@@ -38,6 +39,12 @@ namespace WhiteCow.Log
             if (!Directory.Exists("Log"))
                Directory.CreateDirectory("Log");
 
+            //write last log before the error
+            while (msgQueue.Count!=0)
+				File.AppendAllText(Path.Combine("Log", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"), String.Concat(
+                    DateTime.Now, " ", msgQueue.Dequeue(), Environment.NewLine));
+
+
             File.AppendAllText(Path.Combine("Log",$"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"),String.Concat(
                 DateTime.Now," ",Message,Environment.NewLine));
         }
@@ -49,24 +56,42 @@ namespace WhiteCow.Log
 
         public void LogError(String Message)
         {
+            Message = String.Concat(DateTime.Now, " Error ", Message);
             Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine(String.Concat(DateTime.Now," Error ",Message));
+            Console.WriteLine(Message);
             Console.ForegroundColor = ConsoleColor.White;
             LogToFile(Message.Replace(Environment.NewLine," "));
+                        addElement(Message);
 
         }
 
 
         public void LogWarning(String Message)
         {
+            Message = String.Concat(DateTime.Now, " Warning ", Message);
             Console.ForegroundColor = ConsoleColor.Yellow;
-			Console.WriteLine(String.Concat(DateTime.Now, " Warning ", Message));
+            Console.WriteLine(Message);
+            addElement(Message);
 			Console.ForegroundColor = ConsoleColor.White;
         }
 
         public void LogInfo(String Message)
         {
-			Console.WriteLine(String.Concat(DateTime.Now, " Info ", Message));
+            Message = String.Concat(DateTime.Now, " Info ", Message);
+			Console.WriteLine(Message); 
+            addElement(Message);
+
+		}
+
+        /// <summary>
+        /// add eleet to the queue limited to 10
+        /// </summary>
+        /// <param name="message">Message.</param>
+        void addElement(String message)
+        {
+            msgQueue.Enqueue(message);
+            if (msgQueue.Count > 10)
+                msgQueue.Dequeue();
         }
     }
 }
