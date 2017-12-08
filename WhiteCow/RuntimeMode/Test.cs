@@ -17,27 +17,12 @@ namespace WhiteCow.RuntimeMode
 
         public void StartToMooh()
         {
-			Logger.Instance.LogInfo("meuh");
-			Logger.Instance.LogInfo("meuh");
-			Logger.Instance.LogInfo("meuh");
-			Logger.Instance.LogInfo("meuh");
-			Logger.Instance.LogInfo("meuh");
-
-			Logger.Instance.LogWarning("miaou");
-			Logger.Instance.LogWarning("miaou");
-			Logger.Instance.LogWarning("miaou");
-			Logger.Instance.LogWarning("miaou");
-			Logger.Instance.LogWarning("miaou");
-			Logger.Instance.LogWarning("miaou");
-
-            Logger.Instance.LogError("wouaf");
-
-            return;
+            Console.Clear();
             Logger.Instance.LogInfo("test mode started");
             Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
            
-            Console.Clear();
+
 			Console.WriteLine("test procedure to check if all thing are ok");
 			Console.WriteLine("please note that procedure will put order and withdraw");
 			Console.WriteLine("So you will have to pay the fees");
