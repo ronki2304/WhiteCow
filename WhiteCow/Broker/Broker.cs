@@ -97,7 +97,7 @@ namespace WhiteCow.Broker
             _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]);
             _CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
             _MinimumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"{Platform}.MinimumSize"]);
-            _MaximumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"Runtime.MaximumSize"]);
+            _MaximumSize = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.MaxPositionSize"]);
             _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Leverage"]);
 
             Position = PositionTypeEnum.Out;
