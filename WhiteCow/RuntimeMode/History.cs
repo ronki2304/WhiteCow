@@ -24,7 +24,7 @@ namespace WhiteCow.RuntimeMode
 			btx = new BitFinex();
 
 			Console.WriteLine("History mode enable");
-			String Header = "Date;Bitfinex;Poloniex";
+            String Header = "Date;Bitfinex Last;BitFinex Ask;BitFinex Bid;Poloniex Last;Poloniex Ask;Poloniex Bid";
 			if (!File.Exists(fileName))
 				File.AppendAllText(fileName, Header + Environment.NewLine);
 
@@ -41,7 +41,7 @@ namespace WhiteCow.RuntimeMode
             if (Math.Abs(polo.LastTick.Timestamp - btx.LastTick.Timestamp) >= 4000)
                 return;
 
-            String content = $"{DateTime.Now.ToString()};{btx.LastTick.Last};{polo.LastTick.Last}";
+            String content = $"{DateTime.Now.ToString()};{btx.LastTick.Last};{btx.LastTick.Ask};{btx.LastTick.Bid};{polo.LastTick.Last};{polo.LastTick.Ask};{polo.LastTick.Bid}";
            
 
 			Console.WriteLine(content);

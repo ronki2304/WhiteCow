@@ -85,7 +85,7 @@ namespace WhiteCow.Broker
 
                 Int16 PostTry = 0;
                 String output = String.Empty;
-                while (PostTry < 3)
+                while (PostTry < 5)
                 {
                     try
                     {
@@ -149,7 +149,7 @@ namespace WhiteCow.Broker
             tick.High = Convert.ToDouble(listParam[8]);
             tick.Volume = Convert.ToDouble(listParam[7]);
             tick.Timestamp = DateTime.Now.getUnixMilliTime();
-
+            Logger.Instance.LogInfo($"BitFinex last Tick is {tick.Last}");
 			Logger.Instance.LogInfo("BitFinex Get Tick end");
 
 			return tick;

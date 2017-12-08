@@ -52,7 +52,7 @@ namespace WhiteCow.Broker
                 client.Headers["Sign"] = EncryptPost(PostData, new HMACSHA512());
 
                 Int16 PostTry = 0;
-                while (PostTry < 3)
+                while (PostTry < 5)
                 {
                     try
                     {
