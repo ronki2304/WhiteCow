@@ -22,19 +22,39 @@ namespace WhiteCow.RuntimeMode
             Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
            
-
+          
 			Console.WriteLine("test procedure to check if all thing are ok");
 			Console.WriteLine("please note that procedure will put order and withdraw");
 			Console.WriteLine("So you will have to pay the fees");
             Console.WriteLine("please check that you have the minimum for argin trading on the plateform");
 
-            Console.WriteLine("Test with bitfinex press enter to start");
-            Console.ReadLine();
-            procedure("bitfinex",btx);
-             
-            Console.WriteLine("Now test with Poloniex press enter to start");
-            Console.ReadLine();
-            procedure("poloniex",polo);
+            Console.WriteLine("Which platform do you want to test (poloniex\\bitfinex) leave empty if both");
+            String plat = Console.ReadLine();
+
+            if (String.IsNullOrEmpty(plat))
+            {
+                Console.WriteLine("Test with bitfinex press enter to start");
+                Console.ReadLine();
+                procedure("bitfinex", btx);
+
+                Console.WriteLine("Now test with Poloniex press enter to start");
+                Console.ReadLine();
+                procedure("poloniex", polo);
+            }
+            else if (plat=="poloniex")
+            {
+				Console.WriteLine("Now test with Poloniex press enter to start");
+				Console.ReadLine();
+				procedure("poloniex", polo);
+            }
+            else if (plat=="bitfinex")
+            {
+				Console.WriteLine("Test with bitfinex press enter to start");
+				Console.ReadLine();
+				procedure("bitfinex", btx);
+            }
+                
+
         }
          
         private void procedure(String Market,Broker.Broker broker)

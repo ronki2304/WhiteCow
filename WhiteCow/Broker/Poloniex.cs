@@ -143,7 +143,7 @@ namespace WhiteCow.Broker
 
         private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth)
         {
-			Logger.Instance.LogInfo("Poloniex retur Larket Order Book start");
+			Logger.Instance.LogInfo("Poloniex return Market Order Book start");
 
 			String url = String.Concat(_GetUrl
                 , "/public?command=returnOrderBook&currencyPair="
@@ -156,11 +156,11 @@ namespace WhiteCow.Broker
             var content = HttpGet(url);
             if (IsInError)
             {
-				Logger.Instance.LogInfo("Poloniex retur Larket Order Book end with errors");
+				Logger.Instance.LogInfo("Poloniex return Market Order Book end with errors");
 
 				return null;
             }
-			Logger.Instance.LogInfo("Poloniex retur Larket Order Book end");
+			Logger.Instance.LogInfo("Poloniex return Market Order Book end");
 
 			return PoloniexMarketOrderBook.FromJson(content);
 
@@ -262,7 +262,7 @@ namespace WhiteCow.Broker
             //convert to the target currency because this is amount required in target currency for all exchange
             Double amount = BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount;
             int i = -1;
-            while (amount > 0.02)
+            while (amount > _MinimumSize)
             {
                 i++;
                 Double rate = (orderbook.Raw_bids[i])[0];
@@ -296,7 +296,7 @@ namespace WhiteCow.Broker
 
 				}
             }
-			Logger.Instance.LogInfo("Bitfinex Margin sell ended");
+			Logger.Instance.LogInfo("Poloniex Margin sell ended");
 
 			return true;
         }
