@@ -29,7 +29,7 @@ namespace WhiteCow.RuntimeMode
 			Console.WriteLine("So you will have to pay the fees");
             Console.WriteLine("please check that you have the minimum for argin trading on the plateform");
 
-            Console.WriteLine("Which platform do you want to test (poloniex\\bitfinex) leave empty if both");
+            Console.WriteLine("Which platform do you want to test (poloniex\\bitfinex) leave empty for both");
             String plat = Console.ReadLine();
 
             if (String.IsNullOrEmpty(plat))
@@ -76,7 +76,7 @@ namespace WhiteCow.RuntimeMode
             Console.Clear();
 			Console.WriteLine($"{Market} : Put a margin long order");
             broker.MarginBuy();
-            Console.WriteLine($"{Market} : long order posted please heck on your account if you can see it");
+            Console.WriteLine($"{Market} : long order posted please check on your account if you can see it");
             Console.ReadLine();
 
             Console.Clear();
@@ -96,7 +96,7 @@ namespace WhiteCow.RuntimeMode
 
             broker.Send(address,amount);
 
-            Console.WriteLine($"{Market} : coin sent now check on yourr plateform it is ok");
+            Console.WriteLine($"{Market} : coin sent now check on younanor plateform it is ok");
             Console.WriteLine($"{Market} check if they are received before continue the test");
 		}
     }
