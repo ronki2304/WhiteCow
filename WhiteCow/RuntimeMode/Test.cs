@@ -23,6 +23,7 @@ namespace WhiteCow.RuntimeMode
             BitFinex btx = new BitFinex();
            
           
+          
 			Console.WriteLine("test procedure to check if all thing are ok");
 			Console.WriteLine("please note that procedure will put order and withdraw");
 			Console.WriteLine("So you will have to pay the fees");
@@ -73,9 +74,9 @@ namespace WhiteCow.RuntimeMode
 			Console.ReadLine();
 
             Console.Clear();
-			Console.WriteLine($"{Market} : Put a margin short order");
-            broker.MarginSell();
-            Console.WriteLine($"{Market} : Short order posted please heck on your account if you can see it");
+			Console.WriteLine($"{Market} : Put a margin long order");
+            broker.MarginBuy();
+            Console.WriteLine($"{Market} : long order posted please heck on your account if you can see it");
             Console.ReadLine();
 
             Console.Clear();

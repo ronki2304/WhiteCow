@@ -213,7 +213,7 @@ namespace WhiteCow.Broker
             //convert to the target currency because this is amount required in target currency for all exchange
             Double amount = BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount;
             int i = -1;
-            while (amount > 0.02)
+            while (amount >=_MinimumSize)
             {
                 i++;
                 Double rate = (orderbook.Raw_asks[i])[0];
@@ -228,27 +228,39 @@ namespace WhiteCow.Broker
                     amountToLoad = amount;
                 Logger.Instance.LogInfo($"Poloniex margin amount is {amountToLoad}");
 
-				String PostData = String.Concat("command=marginSell&nonce=", DateTime.Now.getUnixMilliTime()
+				String PostData = String.Concat("command=marginBuy&nonce=", DateTime.Now.getUnixMilliTime()
                                                 , "&currencyPair=", _Pair
                                                 , "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", rate).TrimEnd('0')
                                                 , "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", amountToLoad / rate).TrimEnd('0')
                  );
 
-                Post(PostData);
-                if (!IsInError)
-                    amount = amount - amountToLoad;
-                else
+				var response = Post(PostData);
+
+
+
+				if (IsInError)
+				{
 					Logger.Instance.LogWarning("Poloniex Margin Buy has failed");
+					if (i == 20)
+					{
+						Logger.Instance.LogError("Poloniex Margin Buy failed");
+						IsInError = true;
+						return false;
 
-                if (i==20)
-                {
-					Logger.Instance.LogError("Poloniex Margin buy failed");
-                    IsInError = true;
-                    return false;
-
+					}
+					else
+						continue;
 				}
+              /*  PoloniexResultTrades result = PoloniexResultTrades.FromJson(response);
+
+				//check if a trade is done
+				if (result.ResultingTrades.Count() == 0)
+					continue;
+				amount = amount - result.ResultingTrades.Sum(p => p.Amount * p.Rate);*/
+                amount = amount - amountToLoad;
+
 			}
-			Logger.Instance.LogInfo("Bitfinex Margin buy ended");
+			Logger.Instance.LogInfo("Poloniex Margin buy ended");
 
 			return true;
         }
@@ -282,19 +294,32 @@ namespace WhiteCow.Broker
                                                 , "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", amountToLoad / rate).TrimEnd('0')
                  );
 
-                Post(PostData);
+             var response=   Post(PostData);
 
-				if (!IsInError)
-					amount = amount - amountToLoad;
-				else
-					Logger.Instance.LogWarning("Poloniex Margin Sell has failed");
-				if (i == 20)
-				{
-					Logger.Instance.LogError("Poloniex Margin Sell failed");
-					IsInError = true;
-					return false;
+                		
+			
+                if (IsInError)
+                {
+                    Logger.Instance.LogWarning("Poloniex Margin Sell has failed");
+                    if (i == 20)
+                    {
+                        Logger.Instance.LogError("Poloniex Margin Sell failed");
+                        IsInError = true;
+                        return false;
 
-				}
+                    }
+                    else
+                        continue;
+                }
+                amount = amount - amountToLoad;
+                //PoloniexResultTrades result = PoloniexResultTrades.FromJson(response);
+
+                ////check if a trade is done
+                //if (result.ResultingTrades.Count() == 0)
+                //    continue;
+                //amount = amount - result.ResultingTrades.Sum(p => p.Amount * p.Rate);
+
+
             }
 			Logger.Instance.LogInfo("Poloniex Margin sell ended");
 
@@ -305,7 +330,7 @@ namespace WhiteCow.Broker
         {
             Logger.Instance.LogInfo("Poloniex get open position start");
 
-			String PostData = "command=getMarginPosition&currencyPair=BTC_ETH&nonce=" + DateTime.Now.getUnixMilliTime();
+            String PostData = $"command=getMarginPosition&currencyPair={_Pair}&nonce=" + DateTime.Now.getUnixMilliTime();
             string res = Post(PostData);
             Logger.Instance.LogInfo("Poloniex get open position end");
 
@@ -313,7 +338,7 @@ namespace WhiteCow.Broker
         public override Boolean ClosePosition()
         {
             Logger.Instance.LogInfo("Poloniex get close position started");
-            String PostData = "command=closeMarginPosition&currencyPair=BTC_ETH&nonce=" + DateTime.Now.getUnixMilliTime();
+            String PostData = $"command=closeMarginPosition&currencyPair={_Pair}&nonce=" + DateTime.Now.getUnixMilliTime();
             string res = Post(PostData);
             Logger.Instance.LogInfo("Poloniex get close position ended");
             return true;

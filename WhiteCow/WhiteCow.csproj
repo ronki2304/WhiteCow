@@ -83,6 +83,7 @@
     <Compile Include="Entities\Trading\TradingStep.cs" />
     <Compile Include="Log\Logger.cs" />
     <Compile Include="RuntimeMode\Test.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexResultTrades.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />
