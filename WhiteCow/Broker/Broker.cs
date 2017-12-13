@@ -183,6 +183,7 @@ namespace WhiteCow.Broker
                     try
                     {
                         Response = client.DownloadString(address);
+                        IsInError = false;
                     }
                     catch (TimeoutException tex)
                     {
@@ -194,6 +195,7 @@ namespace WhiteCow.Broker
                         Log.Logger.Instance.LogError($"Http get error : {address}");
                         Log.Logger.Instance.LogError(ex);
                            IsInError = true;
+                        Thread.Sleep(500);
                     }
                 }
              }
