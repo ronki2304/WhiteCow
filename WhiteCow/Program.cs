@@ -15,8 +15,10 @@ namespace WhiteCow
         {
             if (args.Length == 0)
             {
-                ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[] { new TicToc() };
+
+                ServiceBase ServicesToRun;
+                ServicesToRun = new TicToc() ;
+                ServicesToRun.ServiceName = "WhiteCow";
                 ServiceBase.Run(ServicesToRun);
             }
             else if (args[0] == "Test")

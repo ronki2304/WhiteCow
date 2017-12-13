@@ -17,7 +17,7 @@ namespace WhiteCow
 {
     public class TicToc : ServiceBase
     {
-
+        
         IRuntimeMode engine;
 #if DEBUG
         public static void Main(String[] args)
@@ -39,9 +39,10 @@ namespace WhiteCow
 
         }
 #endif
-
+        
         protected override void OnStart(string[] args)
         {
+            
             WhiteCowMode servicemode = (WhiteCowMode)Enum.Parse(typeof(WhiteCowMode), ConfigurationManager.AppSettings["Mode"]);
 
 
