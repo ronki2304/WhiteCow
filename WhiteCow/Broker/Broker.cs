@@ -190,7 +190,7 @@ namespace WhiteCow.Broker
                         Log.Logger.Instance.LogWarning($"Warning hhtp get for {address} has timed out  : {tex.Message}");
                         Thread.Sleep(500);
                     }
-                    catch (Exception ex)
+                    catch (Exception ex) 
                     {
                         Log.Logger.Instance.LogError($"Http get error : {address}");
                         Log.Logger.Instance.LogError(ex);
