@@ -57,9 +57,9 @@ namespace WhiteCow.RuntimeMode
 					continue;
 
 				if (polo.LastTick.Last > btx.LastTick.Last)
-					gap =100 * polo.LastTick.Last / btx.LastTick.Last - 100.0;
+                    gap =100 * polo.LastTick.Bid / btx.LastTick.Ask - 100.0;
 				else
-					gap = 100* btx.LastTick.Last / polo.LastTick.Last - 100.0;
+                    gap = 100* btx.LastTick.Bid / polo.LastTick.Ask - 100.0;
 
                 Logger.Instance.LogInfo($"Gap is {gap}");
 			} while (gap < ThresholdGap);
@@ -108,7 +108,7 @@ namespace WhiteCow.RuntimeMode
 				if (BrHigh.LastTick == null)
 					continue;
 
-                gap = 100 * BrHigh.LastTick.Last / Brlow.LastTick.Last - 100;
+                gap = 100 * BrHigh.LastTick.Ask / Brlow.LastTick.Bid - 100;
 				Logger.Instance.LogInfo($"Gap is {gap}");
 
 			} while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
