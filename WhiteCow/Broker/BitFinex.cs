@@ -23,7 +23,15 @@ namespace WhiteCow.Broker
             BaseWallet = new Wallet { currency = _Pair.Substring(3, 3) };
             RefreshWallet();
         }
-        #region private 
+
+
+		#region private 
+		/// <summary>
+		/// store the amount of the currency bought or sold
+		/// </summary>
+		/// <value>The quote currency quantity.</value>
+		private Double QuoteAmount { get;  set; }
+
         private String PostV1(string apiPath, BitfinexPostBase request)
         {
             IsInError = false;
@@ -284,6 +292,10 @@ namespace WhiteCow.Broker
 
         public override bool MarginBuy()
         {
+            return MarginBuy(BaseWallet.amount);
+        }
+		public override bool MarginBuy(Double Amount)
+		{
             Logger.Instance.LogInfo("Bitfinex Margin buy started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/order/new";
@@ -292,9 +304,11 @@ namespace WhiteCow.Broker
             request.Request = apiPath;
             request.Nonce = nonce.ToString();
             request.Symbol = _Pair.ToLower();
+
+
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (_Leverage* BaseWallet.amount>_MaximumSize?_MaximumSize:BaseWallet.amount / LastTick.Last).ToString();
+                request.Amount = ((_Leverage* Amount>_MaximumSize?_MaximumSize:BaseWallet.amount) / LastTick.Ask).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Long;
             }
             else
@@ -303,7 +317,7 @@ namespace WhiteCow.Broker
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
 
-            request.Price = LastTick.Last.ToString();
+            request.Price = LastTick.Ask.ToString();
             request.Side = "buy";
             request.Type = "market";
             request.use_all_available = "1";
@@ -336,6 +350,10 @@ namespace WhiteCow.Broker
 
         public override Boolean MarginSell()
         {
+            return MarginSell(BaseWallet.amount);
+        }
+		public override Boolean MarginSell(Double Amount)
+		{
             Logger.Instance.LogInfo("Bitfinex Margin sell started");
             long nonce = DateTime.Now.getUnixTime();
             const String apiPath = "/v1/order/new";
@@ -347,15 +365,15 @@ namespace WhiteCow.Broker
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = (_Leverage* BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount / LastTick.Last).ToString();
-                Position = Entities.Trading.PositionTypeEnum.Short;
+                request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : BaseWallet.amount) / LastTick.Bid).ToString();
+				Position = Entities.Trading.PositionTypeEnum.Short;
             }
             else
             {
                 request.Amount = QuoteAmount.ToString();
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
-            request.Price = LastTick.Last.ToString();
+            request.Price = LastTick.Bid.ToString();
             request.Side = "sell";
             request.Type = "market";
             request.use_all_available = "1";

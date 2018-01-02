@@ -25,11 +25,12 @@ namespace WhiteCow.RuntimeMode
         /// start trading engine
         /// </summary>
         public void StartToMooh()
-		{
+        {
+
+            while (true)
+                TickGapAnalisys();
             
-            //while(true)
-            TickGapAnalisys();
-		}
+        }
 
 		/// <summary>
 		/// Analyse if the gap is enough to start trading
@@ -70,6 +71,9 @@ namespace WhiteCow.RuntimeMode
 				SetPosition(btx, polo);
 			else
 				SetPosition(polo, btx);
+
+            polo.RefreshWallet();
+            btx.RefreshWallet();
 		}
 
 		/// <summary>
@@ -81,8 +85,12 @@ namespace WhiteCow.RuntimeMode
 		{
             Logger.Instance.LogInfo("taking position..");
             Step = TradingStep.OpenPosition;
-			Brlow.MarginBuy();
-			BrHigh.MarginSell();
+            Double amount = Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
+            Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
+
+            Brlow.MarginBuy(amount);
+            BrHigh.MarginSell(amount);
+
             Logger.Instance.LogInfo("Position done");
 			ClosePosition(Brlow, BrHigh);
 		}
@@ -118,7 +126,7 @@ namespace WhiteCow.RuntimeMode
 
             Logger.Instance.LogInfo("position closed"); 
              
-            EquilibrateFund(Brlow,BrHigh);
+            //EquilibrateFund(Brlow,BrHigh);
 		}
 		/// <summary>
 		/// Reequilibrate all broker

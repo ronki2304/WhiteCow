@@ -207,11 +207,16 @@ namespace WhiteCow.Broker
         #region http post
         public override bool MarginBuy()
         {
+           return MarginBuy(BaseWallet.amount);
+        }
+
+        public override bool MarginBuy(Double Amount)
+        {
 			Logger.Instance.LogInfo("Poloniex Margin buy started");
 			var orderbook = returnMarketOrderBook(20);
 
             //convert to the target currency because this is amount required in target currency for all exchange
-            Double amount = BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount;
+            Double amount = Amount > _MaximumSize ? _MaximumSize : Amount;
             int i = -1;
             while (amount >=_MinimumSize)
             {
@@ -251,12 +256,7 @@ namespace WhiteCow.Broker
 					else
 						continue;
 				}
-              /*  PoloniexResultTrades result = PoloniexResultTrades.FromJson(response);
-
-				//check if a trade is done
-				if (result.ResultingTrades.Count() == 0)
-					continue;
-				amount = amount - result.ResultingTrades.Sum(p => p.Amount * p.Rate);*/
+            
                 amount = amount - amountToLoad;
 
 			}
@@ -267,12 +267,17 @@ namespace WhiteCow.Broker
 
         public override bool MarginSell()
         {
+            return MarginSell(BaseWallet.amount);
+        }
+
+		public override bool MarginSell(Double Amount)
+        {
 			Logger.Instance.LogInfo("Poloniex Margin sell started");
 
 			var orderbook = returnMarketOrderBook(20);
 
             //convert to the target currency because this is amount required in target currency for all exchange
-            Double amount = BaseWallet.amount > _MaximumSize ? _MaximumSize : BaseWallet.amount;
+            Double amount = Amount > _MaximumSize ? _MaximumSize : Amount;
             int i = -1;
             while (amount > _MinimumSize)
             {

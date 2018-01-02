@@ -80,11 +80,7 @@ namespace WhiteCow.Broker
                 return GetAverageYieldLoan();
             }
         }
-        /// <summary>
-        /// store the amount of the currency bought or sold
-        /// </summary>
-        /// <value>The quote currency quantity.</value>
-        public Double QuoteAmount { get; protected set; }
+       
 
         public Broker(String Platform)
         {
@@ -222,15 +218,27 @@ namespace WhiteCow.Broker
         public abstract Boolean RefreshWallet();
 
         /// <summary>
-        /// Take a long position in margin market
+        /// Take a long position in margin market with all available fund
         /// </summary>
         /// <returns><c>true</c>, if buy was margined, <c>false</c> otherwise.</returns>
         public abstract Boolean MarginBuy();
+		/// <summary>
+		/// Take a long position in margin market
+		/// </summary>
+		/// <returns><c>true</c>, if buy was margined, <c>false</c> otherwise.</returns>
+		/// <param name="Amount">Amount.</param>
+		public abstract Boolean MarginBuy(Double Amount);
 
-        /// <summary>
-        ///Take a short position in margin market        /// </summary>
-        /// <returns><c>true</c>, if sell was margined, <c>false</c> otherwise.</returns>
-        public abstract Boolean MarginSell();
+		/// <summary>
+		///Take a short position in margin market with all available fund        /// </summary>
+		/// <returns><c>true</c>, if sell was margined, <c>false</c> otherwise.</returns>
+		public abstract Boolean MarginSell();
+
+		/// <summary>
+		///Take a short position in margin market        /// </summary>
+		/// <returns><c>true</c>, if sell was margined, <c>false</c> otherwise.</returns>
+		/// <param name="Amount">Amount.</param>
+		public abstract Boolean MarginSell(Double Amount);
 
         public abstract Boolean ClosePosition();
 
