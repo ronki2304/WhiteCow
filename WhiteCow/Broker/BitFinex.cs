@@ -308,7 +308,7 @@ namespace WhiteCow.Broker
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = ((_Leverage* Amount>_MaximumSize?_MaximumSize:BaseWallet.amount) / LastTick.Ask).ToString();
+                request.Amount = ((_Leverage* Amount>_MaximumSize?_MaximumSize:_Leverage * Amount) / LastTick.Ask).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Long;
             }
             else
@@ -320,7 +320,7 @@ namespace WhiteCow.Broker
             request.Price = LastTick.Ask.ToString();
             request.Side = "buy";
             request.Type = "market";
-            request.use_all_available = "1";
+            request.use_all_available = "0";
 
             Logger.Instance.LogInfo($"Bitfinex margin amount is {request.Amount}");
             try
@@ -365,7 +365,7 @@ namespace WhiteCow.Broker
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : BaseWallet.amount) / LastTick.Bid).ToString();
+                request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTick.Bid).ToString();
 				Position = Entities.Trading.PositionTypeEnum.Short;
             }
             else
@@ -376,7 +376,7 @@ namespace WhiteCow.Broker
             request.Price = LastTick.Bid.ToString();
             request.Side = "sell";
             request.Type = "market";
-            request.use_all_available = "1";
+            request.use_all_available = "0";
             Logger.Instance.LogInfo($"Bitfinex margin amount is {request.Amount}");
             try
             {

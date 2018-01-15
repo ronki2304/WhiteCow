@@ -22,6 +22,7 @@ namespace WhiteCow
 #if DEBUG
         public static void Main(String[] args)
         {
+            Console.Clear();
             if (args.Length == 0)
             {
                 (new TicToc()).OnStart(new string[1]);

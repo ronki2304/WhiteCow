@@ -216,7 +216,7 @@ namespace WhiteCow.Broker
 			var orderbook = returnMarketOrderBook(20);
 
             //convert to the target currency because this is amount required in target currency for all exchange
-            Double amount = Amount > _MaximumSize ? _MaximumSize : Amount;
+            Double amount = Amount * _Leverage > _MaximumSize ? _MaximumSize : Amount* _Leverage;
             int i = -1;
             while (amount >=_MinimumSize)
             {
@@ -276,10 +276,10 @@ namespace WhiteCow.Broker
 
 			var orderbook = returnMarketOrderBook(20);
 
-            //convert to the target currency because this is amount required in target currency for all exchange
-            Double amount = Amount > _MaximumSize ? _MaximumSize : Amount;
-            int i = -1;
-            while (amount > _MinimumSize)
+			//convert to the target currency because this is amount required in target currency for all exchange
+			Double amount = Amount * _Leverage > _MaximumSize ? _MaximumSize : Amount * _Leverage;
+			int i = -1;
+            while (amount >= _MinimumSize)
             {
                 i++;
                 Double rate = (orderbook.Raw_bids[i])[0];
@@ -311,7 +311,6 @@ namespace WhiteCow.Broker
                         Logger.Instance.LogError("Poloniex Margin Sell failed");
                         IsInError = true;
                         return false;
-
                     }
                     else
                         continue;

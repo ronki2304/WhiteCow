@@ -27,6 +27,10 @@ namespace WhiteCow.RuntimeMode
         public void StartToMooh()
         {
 
+			Poloniex polo = new Poloniex();
+			BitFinex btx = new BitFinex();
+            polo.MarginSell(0.02);
+            return;
             while (true)
                 TickGapAnalisys();
             
