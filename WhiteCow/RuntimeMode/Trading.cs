@@ -16,22 +16,22 @@ namespace WhiteCow.RuntimeMode
     {
         readonly Double ThresholdGap;
         public TradingStep Step;
+		
+        //trading plateform
+        Poloniex polo;
+		BitFinex btx;
         public Trading()
         {
             ThresholdGap=Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.ThresholdGap"]);
-
+			polo = new Poloniex();
+			btx = new BitFinex();
         }
         /// <summary>
         /// start trading engine
         /// </summary>
         public void StartToMooh()
         {
-
-			Poloniex polo = new Poloniex();
-			BitFinex btx = new BitFinex();
-            polo.MarginSell(0.02);
-            return;
-            while (true)
+          while (true)
                 TickGapAnalisys();
             
         }
@@ -44,14 +44,15 @@ namespace WhiteCow.RuntimeMode
 		{
             Logger.Instance.LogInfo("Tick analysis");
             Step = TradingStep.Tick;
-			Poloniex polo = new Poloniex();
-			BitFinex btx = new BitFinex();
+			polo.RefreshWallet();
+			btx.RefreshWallet();
            
 			//tick analisys
 			Double gap = 0.0;
 			do
 			{
 				Logger.Instance.LogInfo("Gap is not enough wait 10sec");
+                Logger.Instance.LogInfo(Environment.NewLine);
 				Thread.Sleep(10000);
 
 				if (polo.LastTick == null)
@@ -66,18 +67,18 @@ namespace WhiteCow.RuntimeMode
 				else
                     gap = 100* btx.LastTick.Bid / polo.LastTick.Ask - 100.0;
 
-                Logger.Instance.LogInfo($"Gap is {gap}");
+                Logger.Instance.LogInfo($"Gap is {gap}%");
 			} while (gap < ThresholdGap);
 
             Logger.Instance.LogInfo("Gap is large enough take position");
 
+		
 			if (polo.LastTick.Last > btx.LastTick.Last)
 				SetPosition(btx, polo);
 			else
 				SetPosition(polo, btx);
 
-            polo.RefreshWallet();
-            btx.RefreshWallet();
+
 		}
 
 		/// <summary>
@@ -89,7 +90,7 @@ namespace WhiteCow.RuntimeMode
 		{
             Logger.Instance.LogInfo("taking position..");
             Step = TradingStep.OpenPosition;
-            Double amount = Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
+            Double amount = Brlow.BaseWallet.amount < BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
             Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
 
             Brlow.MarginBuy(amount);
@@ -121,7 +122,7 @@ namespace WhiteCow.RuntimeMode
 					continue;
 
                 gap = 100 * BrHigh.LastTick.Ask / Brlow.LastTick.Bid - 100;
-				Logger.Instance.LogInfo($"Gap is {gap}");
+				Logger.Instance.LogInfo($"Gap is {gap}%");
 
 			} while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
 

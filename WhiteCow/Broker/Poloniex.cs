@@ -114,7 +114,7 @@ namespace WhiteCow.Broker
             otick.High = poloticker[_Pair].High24hr;
             otick.Volume = poloticker[_Pair].BaseVolume;
             otick.Timestamp = DateTime.Now.getUnixMilliTime();
-            Logger.Instance.LogInfo($"Poloniex last Tick is {otick.Last}");
+            Logger.Instance.LogInfo($"Poloniex last Tick is {otick.Last} , last bid is : {otick.Bid}, last ask is : {otick.Ask}");
 			Logger.Instance.LogInfo("Poloniex Get Tick end");
 
 			return otick;

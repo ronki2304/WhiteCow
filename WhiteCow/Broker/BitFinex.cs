@@ -157,7 +157,7 @@ namespace WhiteCow.Broker
             tick.High = Convert.ToDouble(listParam[8]);
             tick.Volume = Convert.ToDouble(listParam[7]);
             tick.Timestamp = DateTime.Now.getUnixMilliTime();
-            Logger.Instance.LogInfo($"BitFinex last Tick is {tick.Last}");
+            Logger.Instance.LogInfo($"BitFinex last Tick is {tick.Last}, last bid is : {tick.Bid}, last ask is : {tick.Ask}");
 			Logger.Instance.LogInfo("BitFinex Get Tick end");
 
 			return tick;
