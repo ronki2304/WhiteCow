@@ -25,7 +25,7 @@ namespace WhiteCow.Broker
         protected readonly Double _MaximumSize;
         public Wallet BaseWallet { get; protected set; }
         protected Wallet QuoteWallet;
-
+        
         /// <summary>
         /// contain all withdraw Fees
         /// </summary>
@@ -39,6 +39,7 @@ namespace WhiteCow.Broker
 
         public readonly String _PublicAddress;
 
+        public readonly Plateform Name;
         #region Tick
         /// <summary>
         /// return the last tick
@@ -96,6 +97,7 @@ namespace WhiteCow.Broker
             _MaximumSize = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.MaxPositionSize"]);
             _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Leverage"]);
 
+            Name = (Plateform) Enum.Parse(typeof(Plateform), Platform);
             Position = PositionTypeEnum.Out;
             IsInError = false;
             NbPostCall = new SynchronizedCollection<DateTime>();
