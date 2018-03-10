@@ -6,6 +6,7 @@ using WhiteCow.Interface;
 using WhiteCow.Entities.Trading;
 using WhiteCow.Log;
 using System.IO;
+using System.Linq;
 
 namespace WhiteCow.RuntimeMode
 {
@@ -27,7 +28,7 @@ namespace WhiteCow.RuntimeMode
 
 			if (LogToFile)
 			{
-				String Header = "Date;BrHigh Name;BrHigh Last;BrHigh Ask;BrHigh Bid;BrLow Name;BrLow Last;BrLow Ask;BrLow Bid;state";
+                String Header = "Date;currency;BrHigh Name;BrHigh Last;BrHigh Ask;BrHigh Bid;BrLow Name;BrLow Last;BrLow Ask;BrLow Bid;state";
 				if (!File.Exists(fileName))
 					File.AppendAllText(fileName, Header + Environment.NewLine);
 			}
@@ -50,76 +51,103 @@ namespace WhiteCow.RuntimeMode
 		/// Analyse if the gap is enough to start trading
 		/// if not then wait
 		/// </summary>
-		private void TickGapAnalisys(Poloniex polo, BitFinex btx)
+        private void TickGapAnalisys(Poloniex polo, BitFinex btx)
 		{
+            
 			Logger.Instance.LogInfo("Tick analysis");
 			Step = TradingStep.Tick;
 
 			//tick analisys
-			Double gap = 0.0;
+			var Gap = new Tuple<String, Double>("", 0.0);
+
 			do
 			{
 				Logger.Instance.LogInfo("Gap is not enough wait 10sec");
 				Thread.Sleep(10000);
 
-				if (polo.LastTick == null)
+				if (polo.LastTicks == null)
 					continue;
 
 
-				if (btx.LastTick == null)
+				if (btx.LastTicks == null)
 					continue;
-
+                
 				//check if the broker answer in time to be efficient if not play again
-				if (Math.Abs(btx.LastTick.Timestamp - polo.LastTick.Timestamp) >= 4000)
+                if (Math.Abs(btx.LastTicks.Values.First().Timestamp - polo.LastTicks.Values.First().Timestamp) >= 4000)
 					continue;
+                
+                Gap = CheckCurrenciesGap(btx, polo);				
+            } while (Gap.Item2 < ThresholdGap);
 
-				if (polo.LastTick.Last > btx.LastTick.Last)
-					gap = 100.0 * (polo.LastTick.Bid / btx.LastTick.Ask - 1.0);
-				else
-					gap = 100.0 * (btx.LastTick.Bid / polo.LastTick.Ask - 1.0);
+            Logger.Instance.LogInfo($"Gap is large enough take position on {Gap.Item1}");
 
-				Logger.Instance.LogInfo($"Gap is {gap}");
-			} while (gap < ThresholdGap);
-
-			Logger.Instance.LogInfo("Gap is large enough take position");
-
-			if (polo.LastTick.Last > btx.LastTick.Last)
-				SetPosition(btx, polo);
+            if (polo.LastTicks[Gap.Item1].Last > btx.LastTicks[Gap.Item1].Last)
+                SetPosition(btx, polo, Gap.Item1);
 			else
-				SetPosition(polo, btx);
+				SetPosition(polo, btx,Gap.Item1);
 
 			polo.RefreshWallet();
 			btx.RefreshWallet();
 		}
+
+        /// <summary>
+        /// Checks all currencies gap between two broker.
+        /// </summary>
+        /// <returns>a tupple with the currency and the gap value</returns>
+        /// <param name="br1">Br1.</param>
+        /// <param name="br2">Br2.</param>
+        private Tuple<String,Double> CheckCurrenciesGap(Broker.Broker br1, Broker.Broker br2)
+        {
+            var finalgap = new Tuple<String, Double>("",0.0);
+            foreach (var currency in br1.LastTicks.Keys)
+            {
+                double gap = 0.0;
+                if (!br2.LastTicks.ContainsKey(currency))
+                    continue;
+                
+                if (br1.LastTicks[currency].Last > br2.LastTicks[currency].Last)
+                    gap = 100.0 * (br1.LastTicks[currency].Bid / br2.LastTicks[currency].Ask - 1.0);
+                else
+                    gap = 100.0 * (br2.LastTicks[currency].Bid / br1.LastTicks[currency].Ask - 1.0);
+
+                if (gap > finalgap.Item2)
+                    finalgap = Tuple.Create<String,Double>(currency,gap);
+                
+                Logger.Instance.LogInfo($"for the currency {currency} the Gap is {gap}");
+            }
+            return finalgap;
+        }
 
 		/// <summary>
 		/// put all positions in both platform
 		/// </summary>
 		/// <param name="Brlow">low broker ticker, the long one</param>
 		/// <param name="BrHigh">High broker ticker, the short one</param>
-		private void SetPosition(Broker.Broker Brlow, Broker.Broker BrHigh)
+		private void SetPosition(Broker.Broker Brlow, Broker.Broker BrHigh, String currency)
 		{
+            
 			Logger.Instance.LogInfo("taking position..");
 			Step = TradingStep.OpenPosition;
 			Double amount = Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
 			Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
 
-			Brlow.MarginBuy(amount);
-			BrHigh.MarginSell(amount);
+            Brlow.MarginBuy(currency,amount);
+			BrHigh.MarginSell(currency, amount);
 
 			if (LogToFile)
-				LogTicks(BrHigh, Brlow, "init position");
+                LogTicks(BrHigh, Brlow,currency, "init position");
 
 			Logger.Instance.LogInfo("Position done");
-			ClosePosition(Brlow, BrHigh);
+            ClosePosition(Brlow, BrHigh,currency);
 		}
 		/// <summary>
 		/// wait for the cross or nearly the cross for closing position
 		/// </summary>
 		/// <param name="Brlow">low broker ticker, the long one</param>
 		/// <param name="BrHigh">High broker ticker, the short one</param>
-		private void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh)
+		private void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, String currency)
 		{
+            
 			Logger.Instance.LogInfo("Now Waiting for the cross");
 			Step = TradingStep.ClosePosition;
 			double gap = Double.NaN;
@@ -129,29 +157,30 @@ namespace WhiteCow.RuntimeMode
 
 				Thread.Sleep(10000);
 
-				if (Brlow.LastTick == null)
+                if (Brlow.LastTicks[currency] == null)
 					continue;
 
-				if (BrHigh.LastTick == null)
+				if (BrHigh.LastTicks[currency] == null)
 					continue;
 
 				//check if the broker answer in time to be efficient if not play again
-				if (Math.Abs(BrHigh.LastTick.Timestamp - Brlow.LastTick.Timestamp) >= 4000)
+				if (Math.Abs(BrHigh.LastTicks[currency].Timestamp - Brlow.LastTicks[currency].Timestamp) >= 4000)
 					continue;
 
-				gap = 100.0 * (BrHigh.LastTick.Ask / Brlow.LastTick.Bid - 1.0);
+				gap = 100.0 * (BrHigh.LastTicks[currency].Ask / Brlow.LastTicks[currency].Bid - 1.0);
 				Logger.Instance.LogInfo($"Gap is {gap}");
 				if (LogToFile)
-					LogTicks(BrHigh, Brlow, "check close");
+                    LogTicks(BrHigh, Brlow,currency, "check close");
 
 			} while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
 
-			BrHigh.ClosePosition();
-			Brlow.ClosePosition();
+            BrHigh.ClosePosition(currency);
+            Brlow.ClosePosition(currency);
 
 			Logger.Instance.LogInfo("position closed");
 
 			//EquilibrateFund(Brlow,BrHigh);
+			
 		}
 		/// <summary>
 		/// Reequilibrate all broker
@@ -184,11 +213,13 @@ namespace WhiteCow.RuntimeMode
 
 		}
 
-		private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow, String state)
+		private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow,String currency, String state)
 		{
-			String content = $"{DateTime.Now.ToString()};{BrHigh.Name.ToString()};{BrHigh.LastTick.Last};{BrHigh.LastTick.Ask};{BrHigh.LastTick.Bid};{BrLow.Name.ToString()};{BrLow.LastTick.Last};{BrLow.LastTick.Ask};{BrLow.LastTick.Bid};{state}";
+            
+            String content = $"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()};{BrHigh.LastTicks[currency].Last};{BrHigh.LastTicks[currency].Ask};{BrHigh.LastTicks[currency].Bid};{BrLow.Name.ToString()};{BrLow.LastTicks[currency].Last};{BrLow.LastTicks[currency].Ask};{BrLow.LastTicks[currency].Bid};{state}";
 
 			File.AppendAllText(fileName, content + Environment.NewLine);
+			
 		}
 
 		public void Dispose()

@@ -57,7 +57,6 @@
     <Compile Include="Broker\BitFinex.cs" />
     <Compile Include="Extension\Extension.cs" />
     <Compile Include="TicToc.cs" />
-    <Compile Include="Broker\Poloniex.cs" />
     <Compile Include="Broker\Broker.cs" />
     <Compile Include="Entities\Wallet*.cs" />
     <Compile Include="Entities\Plateform.cs" />
@@ -75,15 +74,16 @@
     <Compile Include="Entities\Poloniex\PoloniexAccountType.cs" />
     <Compile Include="Entities\Poloniex\PoloniexMarketOrderBook.cs" />
     <Compile Include="Entities\WhiteCowMode.cs" />
-    <Compile Include="RuntimeMode\History.cs" />
     <Compile Include="RuntimeMode\Trading.cs" />
     <Compile Include="Entities\Poloniex\PoloniexCurrencyInfos.cs" />
     <Compile Include="Entities\Bitfinex\PostRequest\V1\BitFinexAccountFees.cs" />
     <Compile Include="Interface\IRuntimeMode.cs" />
     <Compile Include="Entities\Trading\TradingStep.cs" />
     <Compile Include="Log\Logger.cs" />
-    <Compile Include="RuntimeMode\Test.cs" />
     <Compile Include="Entities\Poloniex\PoloniexResultTrades.cs" />
+    <Compile Include="RuntimeMode\Test.cs" />
+    <Compile Include="Broker\Poloniex.cs" />
+    <Compile Include="RuntimeMode\History.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />

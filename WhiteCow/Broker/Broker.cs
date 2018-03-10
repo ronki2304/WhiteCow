@@ -8,7 +8,7 @@ using System.Threading;
 using WhiteCow.Entities;
 using WhiteCow.Entities.Trading;
 using WhiteCow.Extension;
-
+using System.Linq;
 namespace WhiteCow.Broker
 {
     public abstract class Broker
@@ -17,15 +17,18 @@ namespace WhiteCow.Broker
         protected readonly String _Secret;
         protected readonly String _GetUrl;
         protected readonly String _PostUrl;
-        protected readonly String _Pair;
         protected readonly Double _Leverage;
         protected readonly Int32 _NbCallPost;
         protected readonly Int32 _CallPostMaxInterval;
         protected readonly Double _MinimumSize;
         protected readonly Double _MaximumSize;
+        protected readonly String _BaseCurrency;
+
+        protected List<String> _QuoteCurrencies;
         public Wallet BaseWallet { get; protected set; }
-        protected Wallet QuoteWallet;
-        
+
+
+
         /// <summary>
         /// contain all withdraw Fees
         /// </summary>
@@ -47,25 +50,29 @@ namespace WhiteCow.Broker
         /// </summary>
         /// <value>The last tick.</value>
         /// 
-        public Ticker LastTick
+        public Dictionary<String,Ticker> LastTicks
         {
             get
             {
-                if (_LastTick==null || DateTime.Now.AddSeconds(-1).getUnixMilliTime()-_LastTick.Timestamp>=1000 )
+                if (_LastTicks==null || DateTime.Now.AddSeconds(-1).getUnixMilliTime()-_LastTicks.First().Value.Timestamp>=1000 )
                 {
                     do
                     {
-                        _LastTick = GetTick();
-                        if (_LastTick == null)
+                        IsInError = false;
+                        _LastTicks = GetTicks();
+                        if (_LastTicks == null)
+                        {
                             Thread.Sleep(100);
+                            IsInError = true;
+                        }
                     }
                     while (IsInError);
                 }
-                return _LastTick;
+                return _LastTicks;
             }
         }
 
-        Ticker _LastTick;
+        Dictionary<String, Ticker> _LastTicks;
         #endregion
 
         public PositionTypeEnum Position { get; protected set; }
@@ -89,15 +96,17 @@ namespace WhiteCow.Broker
             _Secret = ConfigurationManager.AppSettings[$"{Platform}.secret"];
             _GetUrl = ConfigurationManager.AppSettings[$"{Platform}.geturl"];
             _PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
-            _Pair = ConfigurationManager.AppSettings[$"{Platform}.pair"];
+           
             _PublicAddress = ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
             _NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]);
             _CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
             _MinimumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"{Platform}.MinimumSize"]);
             _MaximumSize = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.MaxPositionSize"]);
             _Leverage = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Leverage"]);
+            _BaseCurrency = ConfigurationManager.AppSettings["Runtime.BaseCurrency"];
+            _QuoteCurrencies = ConfigurationManager.AppSettings[$"{Platform}.QuoteCurrency"].Split(',').ToList();
 
-            Name = (Plateform) Enum.Parse(typeof(Plateform), Platform);
+			Name = (Plateform) Enum.Parse(typeof(Plateform), Platform);
             Position = PositionTypeEnum.Out;
             IsInError = false;
             NbPostCall = new SynchronizedCollection<DateTime>();
@@ -208,10 +217,23 @@ namespace WhiteCow.Broker
 
 
         /// <summary>
-        /// Gets the tick.
+        /// Gets the tick for a specific pair.
         /// </summary>
         /// <returns>The tick.</returns>
-        protected abstract Ticker GetTick();
+        protected abstract Ticker GetTick(String currency);
+
+		/// <summary>
+		/// Gets the tick for all specified pair.
+		/// </summary>
+		/// <returns>The tick.</returns>
+        protected abstract Dictionary<String,Ticker> GetTicks();
+
+		/// <summary>
+		/// format the selected pair to the broker format requirement
+		/// </summary>
+		/// <returns>The pair well format.</returns>
+		/// <param name="Currency">Currency wanted</param>
+		protected abstract String Pair(String Currency);
 
         /// <summary>
         /// Refreshs the wallet.
@@ -223,26 +245,26 @@ namespace WhiteCow.Broker
         /// Take a long position in margin market with all available fund
         /// </summary>
         /// <returns><c>true</c>, if buy was margined, <c>false</c> otherwise.</returns>
-        public abstract Boolean MarginBuy();
+        public abstract Boolean MarginBuy(String currency);
 		/// <summary>
 		/// Take a long position in margin market
 		/// </summary>
 		/// <returns><c>true</c>, if buy was margined, <c>false</c> otherwise.</returns>
 		/// <param name="Amount">Amount.</param>
-		public abstract Boolean MarginBuy(Double Amount);
+		public abstract Boolean MarginBuy(String currency,Double Amount);
 
 		/// <summary>
 		///Take a short position in margin market with all available fund        /// </summary>
 		/// <returns><c>true</c>, if sell was margined, <c>false</c> otherwise.</returns>
-		public abstract Boolean MarginSell();
+		public abstract Boolean MarginSell(String currency);
 
 		/// <summary>
 		///Take a short position in margin market        /// </summary>
 		/// <returns><c>true</c>, if sell was margined, <c>false</c> otherwise.</returns>
 		/// <param name="Amount">Amount.</param>
-		public abstract Boolean MarginSell(Double Amount);
+		public abstract Boolean MarginSell(String currency,Double Amount);
 
-        public abstract Boolean ClosePosition();
+        public abstract Boolean ClosePosition(String currency);
 
         /// <summary>
         /// Send coin to a specific address

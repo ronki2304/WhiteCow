@@ -26,9 +26,9 @@ namespace WhiteCow.Broker
 
         public Poloniex() : base(Plateform.Poloniex.ToString())
         {
-            QuoteWallet = new Wallet { currency = _Pair.Split('_')[1] };
-            BaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
-            ExchangeBaseWallet = new Wallet { currency = _Pair.Split('_')[0] };
+            
+            BaseWallet = new Wallet { currency = _BaseCurrency };
+            ExchangeBaseWallet = new Wallet { currency = _BaseCurrency };
 
             RefreshWallet();
         }
@@ -89,36 +89,71 @@ namespace WhiteCow.Broker
         /// Gets the tick for a specified pair
         /// </summary>
         /// <returns>The tick.</returns>
-        protected override Ticker GetTick()
+        protected override Ticker GetTick(String currency)
         {
 			Logger.Instance.LogInfo("Poloniex Get Tick start");
 
-			String address = _GetUrl + "/public?command=returnTicker";
-            WebClient client = new WebClient();
 
-            var content = HttpGet(address);
-
-            if (IsInError)
-            {
-				Logger.Instance.LogInfo("Poloniex Get Tick end with error");
-
-				return null;
-            }
-            var poloticker = PoloniexTicker.FromJson(content);
-
+            var poloticker = GetAllTicks();
             Ticker otick = new Ticker();
-            otick.Ask = poloticker[_Pair].LowestAsk;
-            otick.Bid = poloticker[_Pair].HighestBid;
-            otick.Last = poloticker[_Pair].Last;
-            otick.Low = poloticker[_Pair].Low24hr;
-            otick.High = poloticker[_Pair].High24hr;
-            otick.Volume = poloticker[_Pair].BaseVolume;
+            otick.Ask = poloticker[Pair(currency)].LowestAsk;
+            otick.Bid = poloticker[Pair(currency)].HighestBid;
+            otick.Last = poloticker[Pair(currency)].Last;
+            otick.Low = poloticker[Pair(currency)].Low24hr;
+            otick.High = poloticker[Pair(currency)].High24hr;
+            otick.Volume = poloticker[Pair(currency)].BaseVolume;
             otick.Timestamp = DateTime.Now.getUnixMilliTime();
             Logger.Instance.LogInfo($"Poloniex last Tick is {otick.Last} , last bid is : {otick.Bid}, last ask is : {otick.Ask}");
 			Logger.Instance.LogInfo("Poloniex Get Tick end");
 
 			return otick;
 
+        }
+
+        protected override Dictionary<String,Ticker> GetTicks()
+        {
+			Logger.Instance.LogInfo("Poloniex Get Tick start");
+            Dictionary<String, Ticker> ret = new Dictionary<string, Ticker>();
+			
+            var poloticker = GetAllTicks();
+
+			foreach (var currency in _QuoteCurrencies)
+            {
+                Ticker otick = new Ticker();
+                otick.Ask = poloticker[Pair(currency)].LowestAsk;
+                otick.Bid = poloticker[Pair(currency)].HighestBid;
+                otick.Last = poloticker[Pair(currency)].Last;
+                otick.Low = poloticker[Pair(currency)].Low24hr;
+                otick.High = poloticker[Pair(currency)].High24hr;
+                otick.Volume = poloticker[Pair(currency)].BaseVolume;
+                otick.Timestamp = DateTime.Now.getUnixMilliTime();
+                Logger.Instance.LogInfo($"Poloniex last Tick for {currency} is {otick.Last} , last bid is : {otick.Bid}, last ask is : {otick.Ask}");
+
+				ret.Add(currency,otick);
+            }
+			Logger.Instance.LogInfo("Poloniex Get Tick end");
+            return ret;
+        }
+
+        /// <summary>
+        /// this method is called for all get tick situation refactorisation was required
+        /// only the gettick and the getticks must call it
+        /// </summary>
+        /// <returns>all ticks poloniex format</returns>
+        private Dictionary<String,PoloniexTicker> GetAllTicks()
+        {
+			String address = _GetUrl + "/public?command=returnTicker";
+			WebClient client = new WebClient();
+
+			var content = HttpGet(address);
+
+			if (IsInError)
+			{
+				Logger.Instance.LogInfo("Poloniex Get Tick end with error");
+
+				return null;
+			}
+			return PoloniexTicker.FromJson(content);
         }
         /// <summary>
         /// compute the lending rate
@@ -141,13 +176,13 @@ namespace WhiteCow.Broker
 
         }
 
-        private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth)
+        private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth, String currency)
         {
 			Logger.Instance.LogInfo("Poloniex return Market Order Book start");
 
 			String url = String.Concat(_GetUrl
                 , "/public?command=returnOrderBook&currencyPair="
-                , _Pair
+                , Pair(currency)
                 , "&depth="
                 , depth);
 
@@ -205,15 +240,15 @@ namespace WhiteCow.Broker
 
 
         #region http post
-        public override bool MarginBuy()
+        public override bool MarginBuy(String currency)
         {
-           return MarginBuy(BaseWallet.amount);
+           return MarginBuy(currency,BaseWallet.amount);
         }
 
-        public override bool MarginBuy(Double Amount)
+        public override bool MarginBuy(String currency,Double Amount)
         {
 			Logger.Instance.LogInfo("Poloniex Margin buy started");
-			var orderbook = returnMarketOrderBook(20);
+			var orderbook = returnMarketOrderBook(20, currency);
 
             //convert to the target currency because this is amount required in target currency for all exchange
             Double amount = Amount * _Leverage > _MaximumSize ? _MaximumSize : Amount* _Leverage;
@@ -234,7 +269,7 @@ namespace WhiteCow.Broker
                 Logger.Instance.LogInfo($"Poloniex margin amount is {amountToLoad}");
 
 				String PostData = String.Concat("command=marginBuy&nonce=", DateTime.Now.getUnixMilliTime()
-                                                , "&currencyPair=", _Pair
+                                                , "&currencyPair=", Pair(currency)
                                                 , "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", rate).TrimEnd('0')
                                                 , "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", amountToLoad / rate).TrimEnd('0')
                  );
@@ -265,16 +300,16 @@ namespace WhiteCow.Broker
 			return true;
         }
 
-        public override bool MarginSell()
+        public override bool MarginSell(String currency)
         {
-            return MarginSell(BaseWallet.amount);
+            return MarginSell(currency,BaseWallet.amount);
         }
 
-		public override bool MarginSell(Double Amount)
+		public override bool MarginSell(String currency,Double Amount)
         {
 			Logger.Instance.LogInfo("Poloniex Margin sell started");
 
-			var orderbook = returnMarketOrderBook(20);
+			var orderbook = returnMarketOrderBook(20, currency);
 
 			//convert to the target currency because this is amount required in target currency for all exchange
 			Double amount = Amount * _Leverage > _MaximumSize ? _MaximumSize : Amount * _Leverage;
@@ -294,7 +329,7 @@ namespace WhiteCow.Broker
                     amountToLoad = amount;
 
                 String PostData = String.Concat("command=marginSell&nonce=", DateTime.Now.getUnixMilliTime()
-                                                , "&currencyPair=", _Pair
+                                                , "&currencyPair=", Pair(currency)
                                                 , "&rate=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", rate).TrimEnd('0')
                                                 , "&amount=", String.Format(CultureInfo.InvariantCulture, "{0:F20}", amountToLoad / rate).TrimEnd('0')
                  );
@@ -330,19 +365,19 @@ namespace WhiteCow.Broker
 			return true;
         }
 
-        public void GetOpenPosition()
+        public void GetOpenPosition(String currency)
         {
             Logger.Instance.LogInfo("Poloniex get open position start");
 
-            String PostData = $"command=getMarginPosition&currencyPair={_Pair}&nonce=" + DateTime.Now.getUnixMilliTime();
+            String PostData = $"command=getMarginPosition&currencyPair={Pair(currency)}&nonce=" + DateTime.Now.getUnixMilliTime();
             string res = Post(PostData);
             Logger.Instance.LogInfo("Poloniex get open position end");
 
         }
-        public override Boolean ClosePosition()
+        public override Boolean ClosePosition(String currency)
         {
             Logger.Instance.LogInfo("Poloniex get close position started");
-            String PostData = $"command=closeMarginPosition&currencyPair={_Pair}&nonce=" + DateTime.Now.getUnixMilliTime();
+            String PostData = $"command=closeMarginPosition&currencyPair={Pair(currency)}&nonce=" + DateTime.Now.getUnixMilliTime();
             string res = Post(PostData);
             Logger.Instance.LogInfo("Poloniex get close position ended");
             return true;
@@ -372,7 +407,6 @@ namespace WhiteCow.Broker
             {
                 //when people run WhiteCow whitout fund
                 BaseWallet.amount = 0.0;
-                QuoteWallet.amount = 0.0;
                 ExchangeBaseWallet.amount = 0.0;
                 return true;
             }
@@ -385,17 +419,13 @@ namespace WhiteCow.Broker
                 else
                     BaseWallet.amount = 0.0;
 
-                if (balances.margin != null && balances.margin.ContainsKey(QuoteWallet.currency))
-                    QuoteWallet.amount = Convert.ToDouble(balances.margin[QuoteWallet.currency]);
-                else
-                    QuoteWallet.amount = 0.0;
-
+               
                 if (balances.exchange != null && balances.exchange.ContainsKey(BaseWallet.currency))
                     ExchangeBaseWallet.amount = Convert.ToDouble(balances.exchange[BaseWallet.currency]);
                 else
                     ExchangeBaseWallet.amount = 0.0;
 
-                Logger.Instance.LogInfo($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Quote wallet amount {QuoteWallet.amount}{Environment.NewLine} Exchange base wallet : {ExchangeBaseWallet.amount}");
+                Logger.Instance.LogInfo($"Base wallet amount : {BaseWallet.amount}{Environment.NewLine} Exchange base wallet : {ExchangeBaseWallet.amount}");
                 return true;
             }
         }
@@ -468,6 +498,11 @@ namespace WhiteCow.Broker
         }
         #endregion
 
+
+        protected override String Pair(String currency)
+        {
+            return _BaseCurrency +"_"+currency;
+        }
     }
 
 

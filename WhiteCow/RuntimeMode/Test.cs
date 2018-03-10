@@ -17,6 +17,7 @@ namespace WhiteCow.RuntimeMode
 
         public void StartToMooh()
         {
+            /*
             Console.Clear();
             Logger.Instance.LogInfo("test mode started");
             Poloniex polo = new Poloniex();
@@ -53,16 +54,16 @@ namespace WhiteCow.RuntimeMode
 				Console.WriteLine("Test with bitfinex press enter to start");
 				Console.ReadLine();
 				procedure("bitfinex", btx);
-            }
+            }*/
                 
 
         }
          
         private void procedure(String Market,Broker.Broker broker)
-        {
+        {/*
             Console.Clear();
             Console.WriteLine($"{Market} : Check tick data");
-            Console.WriteLine($"{Market} : The last tick is {broker.LastTick.Last}");
+            Console.WriteLine($"{Market} : The last tick is {broker.LastTicks.Last}");
 
             Console.WriteLine("press enter to continue if ok");
             Console.ReadLine();
@@ -97,7 +98,7 @@ namespace WhiteCow.RuntimeMode
             broker.Send(address,amount);
 
             Console.WriteLine($"{Market} : coin sent now check on younanor plateform it is ok");
-            Console.WriteLine($"{Market} check if they are received before continue the test");
+            Console.WriteLine($"{Market} check if they are received before continue the test");*/
 		}
     }
 }

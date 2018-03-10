@@ -10,6 +10,7 @@ using WhiteCow.Entities.Bitfinex.PostRequest.V1;
 using System.Diagnostics;
 using System.Threading;
 using WhiteCow.Log;
+using System.Collections.Generic;
 
 namespace WhiteCow.Broker
 {
@@ -19,8 +20,8 @@ namespace WhiteCow.Broker
 
         public BitFinex() : base(Plateform.BitFinex.ToString())
         {
-            QuoteWallet = new Wallet { currency = _Pair.Substring(0, 3) };
-            BaseWallet = new Wallet { currency = _Pair.Substring(3, 3) };
+            BaseWallet = new Wallet { currency = _BaseCurrency };
+
             RefreshWallet();
         }
 
@@ -133,11 +134,11 @@ namespace WhiteCow.Broker
         /// Gets the tick.
         /// </summary>
         /// <returns>The tick.</returns>
-        protected override Ticker GetTick()
+        protected override Ticker GetTick(String currency)
         {
 			Logger.Instance.LogInfo("BitFinex Get Tick start");
 
-			String address = _GetUrl + "/v2/ticker/t" + _Pair;
+            String address = _GetUrl + "/v2/ticker/" + Pair(currency);
          
             var content = HttpGet(address);
 
@@ -162,6 +163,75 @@ namespace WhiteCow.Broker
 
 			return tick;
         }
+		protected override Dictionary<String, Ticker> GetTicks()
+		{
+			Logger.Instance.LogInfo("BitFinex Get all Ticks start");
+
+           String currenciesinLine = String.Empty;
+            foreach (var currency in _QuoteCurrencies)
+            {
+                currenciesinLine += "t"+Pair(currency)+",";
+            }
+           currenciesinLine= currenciesinLine.Remove(currenciesinLine.Length-1);
+            String address = _GetUrl + "/v2/tickers?symbols=" +currenciesinLine ;
+
+			var content = HttpGet(address);
+
+			if (IsInError)
+			{
+				Logger.Instance.LogInfo("BitFinex Get Tick end with error");
+
+				return null;
+			}
+            //remove the first and last []
+            content = content.Replace("[[", String.Empty).Replace("]]", String.Empty);
+
+            var listtick = content.Split(new string[] { "],[" }, StringSplitOptions.None).ToList();
+
+            Dictionary<String, Ticker> oticks = new Dictionary<String, Ticker>();
+
+            foreach(var onetick in listtick)
+            {
+				Ticker tick = new Ticker();
+				var listParam = onetick.Split(',');
+				tick.Bid = Convert.ToDouble(listParam[1]);
+				tick.Ask = Convert.ToDouble(listParam[3]);
+				tick.Last = Convert.ToDouble(listParam[7]);
+				tick.Low = Convert.ToDouble(listParam[10].Replace("]", String.Empty));
+				tick.High = Convert.ToDouble(listParam[9]);
+				tick.Volume = Convert.ToDouble(listParam[8]);
+				tick.Timestamp = DateTime.Now.getUnixMilliTime();
+                 String currencyName = listParam[0].Substring(2,listParam[0].Length-listParam[0].IndexOf(_BaseCurrency)-1);//format currency  name based the base currency to manage 4 letters currency
+                switch (currencyName)
+                {
+                    case "DSH":
+                        currencyName = "DASH";
+                        break;
+                    case "IOT":
+                        currencyName = "IOTA";
+                        break;
+                    case "QTM":
+                        currencyName = "QTUM";
+                        break;
+                    case "DAT":
+                        currencyName = "DATA";
+                        break;
+                    case "QSH":
+                        currencyName = "QASH";
+                        break;
+                    default:
+                        break;
+                }
+              
+                oticks.Add(currencyName,tick);
+            }
+
+            Logger.Instance.LogInfo($"BitFinex last all Ticks retrieved, found {oticks.Count()} ticks");
+			Logger.Instance.LogInfo("BitFinex Get all Ticks end");
+            return oticks;
+
+		}
+
         #endregion
 
         #region http post
@@ -187,7 +257,6 @@ namespace WhiteCow.Broker
             {
 				//when poor people run WhiteCow whitout fund like Mick
 				BaseWallet.amount = 0.0;
-				QuoteWallet.amount = 0.0;
                 return true;
             }
             else
@@ -212,14 +281,7 @@ namespace WhiteCow.Broker
                 else
                     BaseWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
                 Logger.Instance.LogInfo($"Bitfinex Base wallet new amount : {BaseWallet.amount}");
-                //quote 
-                wal = Wallets.FirstOrDefault(p => p.StartsWith($"margin,{QuoteWallet.currency}", StringComparison.InvariantCulture));
 
-                if (String.IsNullOrEmpty(wal))
-                    QuoteWallet.amount = 0.0;
-                else
-                    QuoteWallet.amount = Convert.ToDouble(wal.Split(',')[2]);
-                Logger.Instance.LogInfo($"Bitfinex Quote wallet new amount : {QuoteWallet.amount}");
                 IsInError = false;
                 Logger.Instance.LogInfo("Bitfinex Refresh wallet succeeded");
                 return true;
@@ -290,11 +352,11 @@ namespace WhiteCow.Broker
         }
 
 
-        public override bool MarginBuy()
+        public override bool MarginBuy(String currency)
         {
-            return MarginBuy(BaseWallet.amount);
+            return MarginBuy(currency,BaseWallet.amount);
         }
-		public override bool MarginBuy(Double Amount)
+		public override bool MarginBuy(String currency,Double Amount)
 		{
             Logger.Instance.LogInfo("Bitfinex Margin buy started");
             long nonce = DateTime.Now.getUnixTime();
@@ -303,12 +365,12 @@ namespace WhiteCow.Broker
             BitfinexNewOrder request = new BitfinexNewOrder();
             request.Request = apiPath;
             request.Nonce = nonce.ToString();
-            request.Symbol = _Pair.ToLower();
+            request.Symbol = Pair(currency);
 
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = ((_Leverage* Amount>_MaximumSize?_MaximumSize:_Leverage * Amount) / LastTick.Ask).ToString();
+                request.Amount = ((_Leverage* Amount>_MaximumSize?_MaximumSize:_Leverage * Amount) / LastTicks[currency].Ask).ToString();
                 Position = Entities.Trading.PositionTypeEnum.Long;
             }
             else
@@ -317,7 +379,7 @@ namespace WhiteCow.Broker
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
 
-            request.Price = LastTick.Ask.ToString();
+            request.Price = LastTicks[currency].Ask.ToString();
             request.Side = "buy";
             request.Type = "market";
             request.use_all_available = "0";
@@ -348,11 +410,11 @@ namespace WhiteCow.Broker
 
         }
 
-        public override Boolean MarginSell()
+        public override Boolean MarginSell(String currency)
         {
-            return MarginSell(BaseWallet.amount);
+            return MarginSell(currency,BaseWallet.amount);
         }
-		public override Boolean MarginSell(Double Amount)
+		public override Boolean MarginSell(String currency,Double Amount)
 		{
             Logger.Instance.LogInfo("Bitfinex Margin sell started");
             long nonce = DateTime.Now.getUnixTime();
@@ -361,11 +423,11 @@ namespace WhiteCow.Broker
             BitfinexNewOrder request = new BitfinexNewOrder();
             request.Request = apiPath;
             request.Nonce = nonce.ToString();
-            request.Symbol = _Pair.ToLower();
+            request.Symbol = Pair(currency);
 
             if (Position == Entities.Trading.PositionTypeEnum.Out)
             {
-                request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTick.Bid).ToString();
+                request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTicks[currency].Bid).ToString();
 				Position = Entities.Trading.PositionTypeEnum.Short;
             }
             else
@@ -373,7 +435,7 @@ namespace WhiteCow.Broker
                 request.Amount = QuoteAmount.ToString();
                 Position = Entities.Trading.PositionTypeEnum.Out;
             }
-            request.Price = LastTick.Bid.ToString();
+            request.Price = LastTicks[currency].Bid.ToString();
             request.Side = "sell";
             request.Type = "market";
             request.use_all_available = "0";
@@ -455,16 +517,16 @@ namespace WhiteCow.Broker
 
         }
 
-        public override bool ClosePosition()
+        public override bool ClosePosition(String currency)
         {
             switch(Position)
             {
                 case Entities.Trading.PositionTypeEnum.Long:
                     Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
-                    return MarginSell();
+                    return MarginSell(currency);
                 case Entities.Trading.PositionTypeEnum.Short:
                     Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
-                    return MarginBuy();
+                    return MarginBuy(currency);
                 default:
                     return true;
             }
@@ -495,5 +557,36 @@ namespace WhiteCow.Broker
 
        
         #endregion
+
+
+        protected override string Pair(string Currency)
+        {
+            String formatedCurrency;
+            switch(Currency)
+            {
+                case "DASH":
+                    formatedCurrency = "DSH";
+                    break;
+                case "IOTA":
+                    formatedCurrency = "IOT";
+                    break;
+                case "QTUM":
+                    formatedCurrency = "QTM";
+                    break;
+                case "DATA":
+                    formatedCurrency = "DAT";
+                    break;
+                case "QASH":
+                    formatedCurrency = "QSH";
+                    break;
+                default:
+                    formatedCurrency = Currency;
+                    break;
+            }
+           
+            return  formatedCurrency + _BaseCurrency;
+        }
+
+      
     }
 }
