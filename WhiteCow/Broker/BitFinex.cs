@@ -222,8 +222,9 @@ namespace WhiteCow.Broker
                     default:
                         break;
                 }
-              
-                oticks.Add(currencyName,tick);
+				Logger.Instance.LogInfo($"BitFinex last Tick for {currencyName} is {tick.Last} , last bid is : {tick.Bid}, last ask is : {tick.Ask}");
+
+				oticks.Add(currencyName,tick);
             }
 
             Logger.Instance.LogInfo($"BitFinex last all Ticks retrieved, found {oticks.Count()} ticks");

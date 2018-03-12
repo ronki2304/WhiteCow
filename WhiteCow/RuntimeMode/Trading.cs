@@ -76,7 +76,7 @@ namespace WhiteCow.RuntimeMode
                 if (Math.Abs(btx.LastTicks.Values.First().Timestamp - polo.LastTicks.Values.First().Timestamp) >= 4000)
 					continue;
                 
-                Gap = CheckCurrenciesGap(btx, polo);				
+                Gap = CheckCurrenciesGap(polo, btx);				
             } while (Gap.Item2 < ThresholdGap);
 
             Logger.Instance.LogInfo($"Gap is large enough take position on {Gap.Item1}");
