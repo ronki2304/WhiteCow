@@ -7,6 +7,7 @@ using WhiteCow.Entities.Trading;
 using WhiteCow.Log;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace WhiteCow.RuntimeMode
 {
@@ -42,6 +43,10 @@ namespace WhiteCow.RuntimeMode
 			Poloniex polo = new Poloniex();
 			BitFinex btx = new BitFinex();
 
+       
+
+
+            return;
 			while (true)
 				TickGapAnalisys(polo, btx);
 
@@ -131,63 +136,94 @@ namespace WhiteCow.RuntimeMode
 			Double amount = Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
 			Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
 
-            Brlow.MarginBuy(currency,amount);
-			BrHigh.MarginSell(currency, amount);
+            //position in parallel 
+
+            Task tlow = Task.Run(() =>
+            {
+                
+                while (!Brlow.MarginBuy(currency, amount))
+                    Thread.Sleep(500);
+            });
+
+			Task tHigh = Task.Run(() =>
+			{
+				while (!BrHigh.MarginSell(currency, amount))
+					Thread.Sleep(500);
+			});
+			
+            Task.WaitAll();
 
 			if (LogToFile)
                 LogTicks(BrHigh, Brlow,currency, "init position");
 
 			Logger.Instance.LogInfo("Position done");
-            ClosePosition(Brlow, BrHigh,currency);
+            CheckClosePosition(Brlow, BrHigh,currency, amount);
 		}
 		/// <summary>
 		/// wait for the cross or nearly the cross for closing position
 		/// </summary>
 		/// <param name="Brlow">low broker ticker, the long one</param>
 		/// <param name="BrHigh">High broker ticker, the short one</param>
-		private void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, String currency)
-		{
-            
-			Logger.Instance.LogInfo("Now Waiting for the cross");
-			Step = TradingStep.ClosePosition;
-			double gap = Double.NaN;
-			do
-			{
-				Logger.Instance.LogInfo($"Gap is is too large retry");
+		private void CheckClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, String currency, Double amount)
+        {
 
-				Thread.Sleep(10000);
+            Logger.Instance.LogInfo("Now Waiting for the cross");
+            Step = TradingStep.ClosePosition;
+            double gap = Double.NaN;
+            do
+            {
+                Logger.Instance.LogInfo($"Gap is is too large retry");
+
+                Thread.Sleep(10000);
 
                 if (Brlow.LastTicks[currency] == null)
-					continue;
+                    continue;
 
-				if (BrHigh.LastTicks[currency] == null)
-					continue;
+                if (BrHigh.LastTicks[currency] == null)
+                    continue;
 
-				//check if the broker answer in time to be efficient if not play again
-				if (Math.Abs(BrHigh.LastTicks[currency].Timestamp - Brlow.LastTicks[currency].Timestamp) >= 4000)
-					continue;
+                //check if the broker answer in time to be efficient if not play again
+                if (Math.Abs(BrHigh.LastTicks[currency].Timestamp - Brlow.LastTicks[currency].Timestamp) >= 4000)
+                    continue;
 
-				gap = 100.0 * (BrHigh.LastTicks[currency].Ask / Brlow.LastTicks[currency].Bid - 1.0);
-				Logger.Instance.LogInfo($"Gap is {gap}");
-				if (LogToFile)
-                    LogTicks(BrHigh, Brlow,currency, "check close");
+                gap = 100.0 * (BrHigh.LastTicks[currency].Ask / Brlow.LastTicks[currency].Bid - 1.0);
+                Logger.Instance.LogInfo($"Gap is {gap}");
+                if (LogToFile)
+                    LogTicks(BrHigh, Brlow, currency, "check close");
 
-			} while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
+            } while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
 
-            BrHigh.ClosePosition(currency);
-            Brlow.ClosePosition(currency);
+            //Now close position
+            ClosePosition(Brlow, BrHigh, currency,amount);
+        }
 
-			Logger.Instance.LogInfo("position closed");
+        /// <summary>
+        /// once the cross is done closing position...
+        /// </summary>
+        /// <param name="Brlow">Brlow.</param>
+        /// <param name="BrHigh">Br high.</param>
+        /// <param name="currency">Currency.</param>
+        private static void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, string currency, Double amount)
+        {
+			Logger.Instance.LogInfo($"Now closing position");
 
-			//EquilibrateFund(Brlow,BrHigh);
-			
-		}
-		/// <summary>
-		/// Reequilibrate all broker
-		/// </summary>
-		/// <param name="Brlow">low broker ticker, the long one</param>
-		/// <param name="BrHigh">High broker ticker, the short one</param>
-		private void EquilibrateFund(Broker.Broker Brlow, Broker.Broker BrHigh)
+           
+                while (!BrHigh.ClosePosition(currency, amount))
+                    Thread.Sleep(1000);
+           
+                while (!Brlow.ClosePosition(currency, amount))
+                    Thread.Sleep(1000);
+           
+            
+            Logger.Instance.LogInfo("position closed");
+        }
+
+        /// <summary>
+        /// Reequilibrate all broker
+        /// </summary>
+        /// <param name="Brlow">low broker ticker, the long one</param>
+        /// <param name="BrHigh">High broker ticker, the short one</param>
+        private void EquilibrateFund(Broker.Broker Brlow, Broker.Broker BrHigh)
 		{
 			Logger.Instance.LogInfo("Now transfer extra amount to reequilibrate");
 			Step = TradingStep.FundTransfer;

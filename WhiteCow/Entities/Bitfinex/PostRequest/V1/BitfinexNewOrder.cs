@@ -12,7 +12,7 @@ namespace WhiteCow.Entities.Bitfinex.PostRequest.V1
 		public string Amount { get; set; }
 
 		[JsonProperty("price")]
-		public string Price { get; set; }
+		public String Price { get; set; }
 
         [JsonProperty("exchange")]
         public const string Exchange = "bitfinex";

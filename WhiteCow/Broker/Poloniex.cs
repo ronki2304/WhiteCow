@@ -12,6 +12,7 @@ using System.Threading;
 using WhiteCow.Entities.Poloniex;
 using System.Collections.Generic;
 using WhiteCow.Log;
+using WhiteCow.Entities.Poloniex.Close;
 
 namespace WhiteCow.Broker
 {
@@ -74,7 +75,7 @@ namespace WhiteCow.Broker
                         }
                         PostTry++;
                         //wait 5 secondes before retrying
-                        Thread.Sleep(5000);
+                        Thread.Sleep(500);
                     }
                 }
             }
@@ -378,9 +379,16 @@ namespace WhiteCow.Broker
         {
             Logger.Instance.LogInfo("Poloniex get close position started");
             String PostData = $"command=closeMarginPosition&currencyPair={Pair(currency)}&nonce=" + DateTime.Now.getUnixMilliTime();
-            string res = Post(PostData);
+            PoloniexCloseResult close = PoloniexCloseResult.FromJson(Post(PostData));
             Logger.Instance.LogInfo("Poloniex get close position ended");
+            if (close.ResultingTrades == null || close.ResultingTrades.Count == 0)
+                return false;
+            
             return true;
+        }
+        public override Boolean ClosePosition(String currency, Double amount)
+        {
+            return ClosePosition(currency);
         }
 
 

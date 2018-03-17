@@ -266,6 +266,8 @@ namespace WhiteCow.Broker
 
         public abstract Boolean ClosePosition(String currency);
 
+        public abstract Boolean ClosePosition(String currency,Double amount);
+
         /// <summary>
         /// Send coin to a specific address
         /// </summary>
