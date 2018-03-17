@@ -44,9 +44,6 @@ namespace WhiteCow.RuntimeMode
 			BitFinex btx = new BitFinex();
 
        
-
-
-            return;
 			while (true)
 				TickGapAnalisys(polo, btx);
 
