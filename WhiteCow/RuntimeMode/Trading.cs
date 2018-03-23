@@ -43,7 +43,8 @@ namespace WhiteCow.RuntimeMode
 			Poloniex polo = new Poloniex();
 			BitFinex btx = new BitFinex();
 
-       
+            SetPosition(btx,polo,"XRP");
+            return;
 			while (true)
 				TickGapAnalisys(polo, btx);
 
@@ -135,26 +136,22 @@ namespace WhiteCow.RuntimeMode
 
             //position in parallel 
 
-            Task tlow = Task.Run(() =>
-            {
-                
-                while (!Brlow.MarginBuy(currency, amount))
-                    Thread.Sleep(500);
-            });
+            Double QuoteAmount = BrHigh.MarginSell(currency, amount, Brlow.BaseWallet.currency);
 
-			Task tHigh = Task.Run(() =>
-			{
-				while (!BrHigh.MarginSell(currency, amount))
-					Thread.Sleep(500);
-			});
+            if (Double.IsNaN(QuoteAmount))
+                return;
+
+            //buying the same as as we shorted earlier
+            Brlow.MarginBuy(currency, QuoteAmount, currency);
+					
 			
-            Task.WaitAll();
 
 			if (LogToFile)
                 LogTicks(BrHigh, Brlow,currency, "init position");
 
 			Logger.Instance.LogInfo("Position done");
             CheckClosePosition(Brlow, BrHigh,currency, amount);
+          
 		}
 		/// <summary>
 		/// wait for the cross or nearly the cross for closing position
@@ -205,10 +202,10 @@ namespace WhiteCow.RuntimeMode
 			Logger.Instance.LogInfo($"Now closing position");
 
            
-                while (!BrHigh.ClosePosition(currency, amount))
+            while (!BrHigh.ClosePosition(currency))
                     Thread.Sleep(1000);
            
-                while (!Brlow.ClosePosition(currency, amount))
+            while (!Brlow.ClosePosition(currency))
                     Thread.Sleep(1000);
            
             
@@ -246,13 +243,21 @@ namespace WhiteCow.RuntimeMode
 
 		}
 
-		private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow,String currency, String state)
+		private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow, String currency, String state)
 		{
-            
-            String content = $"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()};{BrHigh.LastTicks[currency].Last};{BrHigh.LastTicks[currency].Ask};{BrHigh.LastTicks[currency].Bid};{BrLow.Name.ToString()};{BrLow.LastTicks[currency].Last};{BrLow.LastTicks[currency].Ask};{BrLow.LastTicks[currency].Bid};{state}";
+
+			String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
+			   , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+			   , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+			   , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+			   , $";{BrLow.Name.ToString()}"
+			   , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+			   , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+			   , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+			   , $";{state}");
 
 			File.AppendAllText(fileName, content + Environment.NewLine);
-			
+
 		}
 
 		public void Dispose()

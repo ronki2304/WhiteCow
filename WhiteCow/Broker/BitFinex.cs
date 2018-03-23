@@ -342,11 +342,11 @@ namespace WhiteCow.Broker
         }
 
 
-        public override bool MarginBuy(String currency)
+        public override Double MarginBuy(String currency)
         {
-            return MarginBuy(currency, BaseWallet.amount);
+            return MarginBuy(currency, BaseWallet.amount, BaseWallet.currency);
         }
-        public override bool MarginBuy(String currency, Double Amount)
+        public override Double MarginBuy(String currency, Double Amount, String unit)
         {
             int nbtry = 0; //compute how many try to access to the API call
             
@@ -359,24 +359,15 @@ namespace WhiteCow.Broker
                 BitfinexNewOrder request = new BitfinexNewOrder();
                 PositionTypeEnum tempPos; //use to store the actual position if rollback we don't update the real position if it is ok we update the real position
 
-                if (Position == Entities.Trading.PositionTypeEnum.Out)
-                {
+                if (BaseWallet.currency==unit)
                     request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTicks[currency].Ask).ToString();
-                    tempPos = Entities.Trading.PositionTypeEnum.Long;
-                }
                 else
-                {
-                    request.Amount = QuoteAmount.ToString();
-                    tempPos = Entities.Trading.PositionTypeEnum.Out;
-                }
-
+                    request.Amount = Amount.ToString();
+        
+                tempPos = Entities.Trading.PositionTypeEnum.Long;
                 request.Request = apiPath;
                 request.Nonce = nonce.ToString();
                 request.Symbol = Pair(currency);
-
-
-              
-
                 request.Price = LastTicks[currency].Ask.ToString("F99").TrimEnd('0');
                 request.Side = "buy";
                 request.Type = "market";
@@ -397,17 +388,16 @@ namespace WhiteCow.Broker
                 QuoteAmount = Convert.ToDouble(response.OriginalAmount);
                 Logger.Instance.LogInfo("Bitfinex Margin buy ended");
                 Position = tempPos;
-                return true;
+                return QuoteAmount;
             }
-            return false;
+            return Double.NaN;
+         }
 
-        }
-
-        public override Boolean MarginSell(String currency)
+        public override Double MarginSell(String currency)
         {
-            return MarginSell(currency, BaseWallet.amount);
+            return MarginSell(currency, BaseWallet.amount, BaseWallet.currency);
         }
-        public override Boolean MarginSell(String currency, Double Amount)
+        public override Double MarginSell(String currency, Double Amount, String unit)
         {
             int nbtry = 0; //compute how many try to access to the API call
             while (nbtry < 3)
@@ -424,21 +414,18 @@ namespace WhiteCow.Broker
                 request.Nonce = nonce.ToString();
                 request.Symbol = Pair(currency);
 
-                if (Position == Entities.Trading.PositionTypeEnum.Out)
-                {
+                if (BaseWallet.currency==unit)
                     request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTicks[currency].Ask).ToString();
-                    tempPos = Entities.Trading.PositionTypeEnum.Short;
-                }
                 else
-                {
-                    request.Amount = QuoteAmount.ToString();
-                    tempPos = Entities.Trading.PositionTypeEnum.Out;
-                }
+                    request.Amount = Amount.ToString();
+                    
+                tempPos = Entities.Trading.PositionTypeEnum.Short;
+
                 request.Price = LastTicks[currency].Bid.ToString("F99").TrimEnd('0');
                 request.Side = "sell";
                 request.Type = "market";
                 request.use_all_available = "0";
-                Logger.Instance.LogInfo($"Bitfinex margin amount is {request.Amount}");
+                Logger.Instance.LogInfo($"Bitfinex margin quoted amount is {request.Amount}");
 
                 BitfinexNewOrderResponse response = BitfinexNewOrderResponse.FromJson(PostV1(apiPath, request));
                 //call post failed three times then stop process
@@ -452,10 +439,10 @@ namespace WhiteCow.Broker
                 QuoteAmount = Convert.ToDouble(response.OriginalAmount);
                 Logger.Instance.LogInfo("Bitfinex Margin sell ended");
                 Position = tempPos;
-                return true;
+                return QuoteAmount;
 
             }
-            return false;
+            return Double.NaN;
         }
 
         public Boolean CancelOrder(Int64 orderId)
@@ -512,36 +499,34 @@ namespace WhiteCow.Broker
 
         }
 
-        public override bool ClosePosition(String currency)
-        {
-            switch (Position)
-            {
-                case Entities.Trading.PositionTypeEnum.Long:
-                    Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
-                    return MarginSell(currency);
-                case Entities.Trading.PositionTypeEnum.Short:
-                    Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
-                    return MarginBuy(currency);
-                default:
-                    return true;
-            }
 
-        }
+        public override Boolean ClosePosition(String currency)
+		{
+			Double ClosedAmount;
+			switch (Position)
+			{
+				case Entities.Trading.PositionTypeEnum.Long:
+					Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
+					ClosedAmount = MarginSell(currency, QuoteAmount, currency);
+					break;
+				case Entities.Trading.PositionTypeEnum.Short:
+					Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
+					ClosedAmount = MarginBuy(currency, QuoteAmount, currency);
+					break;
+				default:
+					return true;
+			}
 
-        public override bool ClosePosition(String currency, Double amount)
-        {
-            switch (Position)
-            {
-                case Entities.Trading.PositionTypeEnum.Long:
-                    Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
-                    return MarginSell(currency,amount);
-                case Entities.Trading.PositionTypeEnum.Short:
-                    Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
-                    return MarginBuy(currency, amount);
-                default:
-                    return true;
-            }
-        }
+			if (!Double.IsNaN(ClosedAmount))
+			{
+				Position = Entities.Trading.PositionTypeEnum.Out;
+				return true;
+			}
+			else
+				return false;
+
+		}
+     
 
         public override double GetWithDrawFees()
         {
