@@ -252,12 +252,15 @@ namespace WhiteCow.Broker
 			var orderbook = returnMarketOrderBook(20, currency);
 			Double OrderedAmount;
 			Double finalAmount = 0.0; //represent the final bought quantity of currency bought
-			
+
             if (unit == _BaseCurrency)
-				//convert to the target currency because this is amount required in target currency for all exchange
-				OrderedAmount = Amount * _Leverage > _MaximumSize ? _MaximumSize : Amount * _Leverage;
-			else
-				OrderedAmount = Amount;
+                //convert to the target currency because this is amount required in target currency for all exchange
+                OrderedAmount = Amount * _Leverage > _MaximumSize ? _MaximumSize : Amount * _Leverage;
+            else
+            {
+                //include the fee
+                OrderedAmount = (1+0.005)*Amount;
+            }
 			
             int i = -1;
 
