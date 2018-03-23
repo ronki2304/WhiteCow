@@ -47,7 +47,14 @@ namespace WhiteCow.RuntimeMode
                 if (!btx.LastTicks.ContainsKey(currency))
                     continue;
                 
-                String content = $"{DateTime.Now.ToString()};{currency};{btx.LastTicks[currency].Last};{btx.LastTicks[currency].Ask};{btx.LastTicks[currency].Bid};{polo.LastTicks[currency].Last};{polo.LastTicks[currency].Ask};{polo.LastTicks[currency].Bid}";
+                String content = String.Concat($"{DateTime.Now.ToString()}"
+                  ,$";{currency}" 
+                  ,$";{btx.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}" 
+                  ,$";{btx.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}" 
+                  ,$";{btx.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}" 
+                  ,$";{polo.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+                  ,$";{polo.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}" 
+                  ,$";{polo.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}");
 
 
                 Console.WriteLine(content);
