@@ -259,7 +259,7 @@ namespace WhiteCow.Broker
             else
             {
                 //include the fee
-                OrderedAmount = (1+0.005)*Amount;
+                OrderedAmount = (1+0,0050188126959)*Amount;
             }
 			
             int i = -1;
