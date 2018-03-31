@@ -14,7 +14,7 @@ namespace WhiteCow.RuntimeMode
 
     public class History: IRuntimeMode
     {
-		BitFinex polo ;
+        Poloniex polo ;
 		BitFinex btx ;
 		string fileName = "history.csv";
 		Timer tm;
@@ -22,7 +22,7 @@ namespace WhiteCow.RuntimeMode
         public void StartToMooh()
         {
             
-			polo = new BitFinex();
+            polo = new Poloniex();
 			btx = new BitFinex();
 
 			Console.WriteLine("History mode enable");
