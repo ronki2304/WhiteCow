@@ -34,18 +34,18 @@ namespace WhiteCow.Log
 			}
         }
 
-        private void LogToFile(String Message)
+        private void LogErrorToFile(String Message)
         {
             if (!Directory.Exists("Log"))
                Directory.CreateDirectory("Log");
 
             //write last log before the error
             while (msgQueue.Count!=0)
-				File.AppendAllText(Path.Combine("Log", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"), String.Concat(
+				File.AppendAllText(Path.Combine("ErrorLog", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"), String.Concat(
                     DateTime.Now, " ", msgQueue.Dequeue(), Environment.NewLine));
 
 
-            File.AppendAllText(Path.Combine("Log",$"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"),String.Concat(
+            File.AppendAllText(Path.Combine("ErrorLog",$"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"),String.Concat(
                 DateTime.Now," ",Message,Environment.NewLine));
         }
 
@@ -60,12 +60,19 @@ namespace WhiteCow.Log
             Console.ForegroundColor = ConsoleColor.Red;
             Console.WriteLine(Message);
             Console.ForegroundColor = ConsoleColor.White;
-            LogToFile(Message.Replace(Environment.NewLine," "));
+            LogErrorToFile(Message.Replace(Environment.NewLine," "));
                         addElement(Message);
+            LogToFile(Message);
 
         }
 
-
+        void LogToFile(String Message)
+        {
+			if (!Directory.Exists("Log"))
+				Directory.CreateDirectory("Log");
+			File.AppendAllText(Path.Combine("Log", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"), String.Concat(
+			   DateTime.Now, " ", Message, Environment.NewLine));
+        }
         public void LogWarning(String Message)
         {
             Message = String.Concat(DateTime.Now, " Warning ", Message);
@@ -73,6 +80,7 @@ namespace WhiteCow.Log
             Console.WriteLine(Message);
             addElement(Message);
 			Console.ForegroundColor = ConsoleColor.White;
+            LogToFile(Message);
         }
 
         public void LogInfo(String Message)
@@ -80,6 +88,7 @@ namespace WhiteCow.Log
             Message = String.Concat(DateTime.Now, " Info ", Message);
 			Console.WriteLine(Message); 
             addElement(Message);
+            LogToFile(Message);
 
 		}
 
