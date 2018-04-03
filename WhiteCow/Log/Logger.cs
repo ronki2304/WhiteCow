@@ -88,7 +88,7 @@ namespace WhiteCow.Log
             Message = String.Concat(DateTime.Now, " Info ", Message);
 			Console.WriteLine(Message); 
             addElement(Message);
-            LogToFile(Message); 
+            LogToFile(Message);  
 
 		}
 
@@ -100,7 +100,7 @@ namespace WhiteCow.Log
         {
             msgQueue.Enqueue(message);
             if (msgQueue.Count > 10)
-                msgQueue.Dequeue();
+                msgQueue.Dequeue(); 
         }
     }
 }
