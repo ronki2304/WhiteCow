@@ -13,6 +13,7 @@ using WhiteCow.Entities.Poloniex;
 using System.Collections.Generic;
 using WhiteCow.Log;
 using WhiteCow.Entities.Poloniex.Close;
+using System.Threading.Tasks;
 
 namespace WhiteCow.Broker
 {
@@ -42,7 +43,7 @@ namespace WhiteCow.Broker
 		/// </summary>
 		/// <returns>The post.</returns>
 		/// <param name="PostData">Post data.</param>
-		private String Post(String PostData)
+		String Post(String PostData)
 		{
 			IsInError = false;
 			Logger.Instance.LogInfo($"Poloniex post data : {PostData}");
@@ -518,7 +519,7 @@ namespace WhiteCow.Broker
 											, Output.ToString()
 										   );
 
-			String res = Post(PostData);
+			String res =  Post(PostData);
 			if (IsInError)
 				return false;
 			RefreshWallet();

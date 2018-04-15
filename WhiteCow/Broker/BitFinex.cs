@@ -208,6 +208,15 @@ namespace WhiteCow.Broker
                     case "QSH":
                         currencyName = "QASH";
                         break;
+                    case "AIO":
+                        currencyName = "AION";
+                        break;
+					case "IOS":
+						currencyName = "IOST";
+						break;
+					case "ODE":
+						currencyName = "ODEM";
+						break;
                     default:
                         break;
                 }
@@ -574,6 +583,15 @@ namespace WhiteCow.Broker
                 case "QASH":
                     formatedCurrency = "QSH";
                     break;
+                case "AION":
+                    formatedCurrency="AIO";
+                    break;
+				case "IOST":
+					formatedCurrency = "IOS";
+					break;
+				case "ODEM":
+					formatedCurrency = "ODE";
+					break;
                 default:
                     formatedCurrency = Currency;
                     break;
