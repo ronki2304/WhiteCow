@@ -36,8 +36,8 @@ namespace WhiteCow.Log
 
         private void LogErrorToFile(String Message)
         {
-            if (!Directory.Exists("Log"))
-               Directory.CreateDirectory("Log");
+            if (!Directory.Exists("ErrorLog"))
+               Directory.CreateDirectory("ErrorLog");
 
             //write last log before the error
             while (msgQueue.Count!=0)
@@ -80,7 +80,7 @@ namespace WhiteCow.Log
             Console.WriteLine(Message);
             addElement(Message);
 			Console.ForegroundColor = ConsoleColor.White;
-            LogToFile(Message);
+  //          LogToFile(Message);
         }
 
         public void LogInfo(String Message)
@@ -88,7 +88,7 @@ namespace WhiteCow.Log
             Message = String.Concat(DateTime.Now, " Info ", Message);
 			Console.WriteLine(Message); 
             addElement(Message);
-            LogToFile(Message); 
+//            LogToFile(Message); 
 
 		}
 
