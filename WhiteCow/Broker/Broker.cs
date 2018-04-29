@@ -72,6 +72,7 @@ namespace WhiteCow.Broker
 			}
 		}
 
+
 		Dictionary<String, Ticker> _LastTicks;
 		#endregion
 
@@ -226,7 +227,7 @@ namespace WhiteCow.Broker
 		/// Gets the tick for all specified pair.
 		/// </summary>
 		/// <returns>The tick.</returns>
-		protected abstract Dictionary<String, Ticker> GetTicks();
+		public abstract Dictionary<String, Ticker> GetTicks();
 
 		/// <summary>
 		/// format the selected pair to the broker format requirement

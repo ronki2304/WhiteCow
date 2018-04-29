@@ -43,8 +43,10 @@ namespace WhiteCow.RuntimeMode
             Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
 
+            polo.GetOpenOrders("XRP");
+
             //SetPosition(polo, btx, "XRP");
-            //return;            
+            return;            
 
             while (true)
                 TickGapAnalisys(polo, btx);
@@ -68,6 +70,11 @@ namespace WhiteCow.RuntimeMode
             {
                 Logger.Instance.LogInfo("Gap is not enough wait 10sec");
                 Thread.Sleep(10000);
+
+                Task t1 = Task.Run(() => { polo.GetTicks(); });
+                Task t2 = Task.Run(() => { btx.GetTicks(); });
+
+                Task.WaitAll();
 
                 if (polo.LastTicks == null)
                     continue;
@@ -135,9 +142,14 @@ namespace WhiteCow.RuntimeMode
             Double amount = Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
             Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
 
-            //position in parallel 
+         
 
             Double QuoteAmount = BrHigh.MarginSell(currency, amount, Brlow.BaseWallet.currency);
+            //control one
+            //check if the orders are passed
+            //the amount of margin postion should be the same as QuoteAmount
+            //if not then close the possible partially opened ones
+            //return
 
             if (Double.IsNaN(QuoteAmount))
                 return;
@@ -145,6 +157,9 @@ namespace WhiteCow.RuntimeMode
             //buying the same as as we shorted earlier
             Brlow.MarginBuy(currency, QuoteAmount, currency);
 
+            //control two
+            //this time it is different we have to be sure that we are in position
+            //if not enough money in market then close open position and reopen new ones
 
 
             if (LogToFile)

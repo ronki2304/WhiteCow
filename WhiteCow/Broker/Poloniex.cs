@@ -75,7 +75,7 @@ namespace WhiteCow.Broker
 							return "error";
 						}
 						PostTry++;
-						//wait 5 secondes before retrying
+						//wait 0.5 secondes before retrying
 						Thread.Sleep(500);
 					}
 				}
@@ -112,7 +112,7 @@ namespace WhiteCow.Broker
 
 		}
 
-		protected override Dictionary<String, Ticker> GetTicks()
+		public override Dictionary<String, Ticker> GetTicks()
 		{
 			Logger.Instance.LogInfo("Poloniex Get Tick start");
 			Dictionary<String, Ticker> ret = new Dictionary<string, Ticker>();
@@ -497,7 +497,35 @@ namespace WhiteCow.Broker
 			return true;
 		}
 
+        public void GetMarginOrders(String currency)
+        {
+			String PostData = String.Concat("command=getMarginPosition"
+                                            , $"&currencyPair={Pair(currency)}"
+											, $"&nonce={DateTime.Now.getUnixMilliTime()}"
+											);
+            Console.WriteLine(Post(PostData));
 
+            //sample to serialize
+            //with position
+			//{ "amount":"323.82498915","total":"-0.02992499","basePrice":"0.00009241","liquidationPrice":"-0.00018471","pl":"-0.00011690","lendingFees":"0.00000000","type":"long"}
+
+            //without position
+			//{ "type":"none","amount":"0.00000000","total":"0.00000000","basePrice":"0.00000000","liquidationPrice":-1,"pl":"0.00000000","lendingFees":"0.00000000"}
+
+        }
+
+		/// <summary>
+		/// retrieve orders that are not traded
+		/// </summary>
+		/// <param name="currency">Currency.</param>
+		public void GetOpenOrders(String currency)
+        {
+			String PostData = String.Concat("command=returnOpenOrders"
+											, $"&currencyPair={Pair(currency)}"
+											, $"&nonce={DateTime.Now.getUnixMilliTime()}"
+											);
+			Console.WriteLine(Post(PostData));
+        }
 		/// <summary>
 		/// permit to transfer fund between account
 		/// </summary>

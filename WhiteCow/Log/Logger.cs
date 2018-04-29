@@ -39,8 +39,11 @@ namespace WhiteCow.Log
             if (!Directory.Exists("ErrorLog"))
                Directory.CreateDirectory("ErrorLog");
 
+            if (!File.Exists(Path.Combine("ErrorLog", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt")))
+                File.Create(Path.Combine("ErrorLog", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"));
             //write last log before the error
             while (msgQueue.Count!=0)
+                
 				File.AppendAllText(Path.Combine("ErrorLog", $"{DateTime.Now.ToString("yyyyMMdd")}_Log.txt"), String.Concat(
                     DateTime.Now, " ", msgQueue.Dequeue(), Environment.NewLine));
 

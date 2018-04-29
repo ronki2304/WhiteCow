@@ -48,19 +48,24 @@ namespace WhiteCow.Broker
                 client.Headers["X-BFX-SIGNATURE"] = EncryptPost(body64, new HMACSHA384());
 
                 IsInError = true;
-
-                try
+                Int16 PostTry = 0;
+                String output = String.Empty;
+                while (PostTry < 5)
                 {
-                    AuthorizePost();
-                    String response = client.UploadString(address, request.serialize());
-                    Logger.Instance.LogInfo(String.Concat("Response is : ", response));
-                    IsInError = false;
-                    return response;
-                }
-                catch (Exception ex)
-                {
-                    Logger.Instance.LogWarning($"Post V1 for {apiPath} exception occured :");
-                    Logger.Instance.LogWarning(ex.ToString());
+                    try
+                    {
+                        AuthorizePost();
+                        String response = client.UploadString(address, request.serialize());
+                        Logger.Instance.LogInfo(String.Concat("Response is : ", response));
+                        IsInError = false;
+                        return response;
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Instance.LogWarning($"Post V1 for {apiPath} exception occured :");
+                        Logger.Instance.LogWarning(ex.ToString());
+                    }
+                    Thread.Sleep(500);
                 }
             }
 
@@ -105,8 +110,8 @@ namespace WhiteCow.Broker
                             return "error";
                         }
                         PostTry++;
-                        //wait 5 secondes before retrying
-                        Thread.Sleep(5000);
+                        //wait 0.5 secondes before retrying
+                        Thread.Sleep(500);
                     }
                 }
 
@@ -152,7 +157,7 @@ namespace WhiteCow.Broker
 
             return tick;
         }
-        protected override Dictionary<String, Ticker> GetTicks()
+        public override Dictionary<String, Ticker> GetTicks()
         {
             Logger.Instance.LogInfo("BitFinex Get all Ticks start");
 
@@ -211,12 +216,12 @@ namespace WhiteCow.Broker
                     case "AIO":
                         currencyName = "AION";
                         break;
-					case "IOS":
-						currencyName = "IOST";
-						break;
-					case "ODE":
-						currencyName = "ODEM";
-						break;
+                    case "IOS":
+                        currencyName = "IOST";
+                        break;
+                    case "ODE":
+                        currencyName = "ODEM";
+                        break;
                     default:
                         break;
                 }
@@ -230,15 +235,14 @@ namespace WhiteCow.Broker
             return oticks;
 
         }
+		#endregion
 
-        #endregion
-
-        #region http post
-        /// <summary>
-        /// Refreshs the wallet amount.
-        /// bitfinex api v2
-        /// </summary>
-        public override Boolean RefreshWallet()
+		#region http post
+		/// <summary>
+		/// Refreshs the wallet amount.
+		/// bitfinex api v2
+		/// </summary>
+		public override Boolean RefreshWallet()
         {
             Logger.Instance.LogInfo("Bitfinex Refresh Wallet started");
             const String apiPath = "/v2/auth/r/wallets";
@@ -358,7 +362,7 @@ namespace WhiteCow.Broker
         public override Double MarginBuy(String currency, Double Amount, String unit)
         {
             int nbtry = 0; //compute how many try to access to the API call
-            
+
             while (nbtry < 3)
             {
                 Logger.Instance.LogInfo("Bitfinex Margin buy started");
@@ -368,11 +372,11 @@ namespace WhiteCow.Broker
                 BitfinexNewOrder request = new BitfinexNewOrder();
                 PositionTypeEnum tempPos; //use to store the actual position if rollback we don't update the real position if it is ok we update the real position
 
-                if (BaseWallet.currency==unit)
+                if (BaseWallet.currency == unit)
                     request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTicks[currency].Ask).ToString();
                 else
                     request.Amount = Amount.ToString();
-        
+
                 tempPos = Entities.Trading.PositionTypeEnum.Long;
                 request.Request = apiPath;
                 request.Nonce = nonce.ToString();
@@ -400,7 +404,7 @@ namespace WhiteCow.Broker
                 return QuoteAmount;
             }
             return Double.NaN;
-         }
+        }
 
         public override Double MarginSell(String currency)
         {
@@ -414,7 +418,7 @@ namespace WhiteCow.Broker
                 Logger.Instance.LogInfo("Bitfinex Margin sell started");
                 long nonce = DateTime.Now.getUnixTime();
                 const String apiPath = "/v1/order/new";
-               
+
                 PositionTypeEnum tempPos; //use to store the actual position if rollback we don't update the real position if it is ok we update the real position
 
 
@@ -423,11 +427,11 @@ namespace WhiteCow.Broker
                 request.Nonce = nonce.ToString();
                 request.Symbol = Pair(currency);
 
-                if (BaseWallet.currency==unit)
+                if (BaseWallet.currency == unit)
                     request.Amount = ((_Leverage * Amount > _MaximumSize ? _MaximumSize : _Leverage * Amount) / LastTicks[currency].Ask).ToString();
                 else
                     request.Amount = Amount.ToString();
-                    
+
                 tempPos = Entities.Trading.PositionTypeEnum.Short;
 
                 request.Price = LastTicks[currency].Bid.ToString("F99").TrimEnd('0');
@@ -510,32 +514,32 @@ namespace WhiteCow.Broker
 
 
         public override Boolean ClosePosition(String currency)
-		{
-			Double ClosedAmount;
-			switch (Position)
-			{
-				case Entities.Trading.PositionTypeEnum.Long:
-					Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
-					ClosedAmount = MarginSell(currency, QuoteAmount, currency);
-					break;
-				case Entities.Trading.PositionTypeEnum.Short:
-					Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
-					ClosedAmount = MarginBuy(currency, QuoteAmount, currency);
-					break;
-				default:
-					return true;
-			}
+        {
+            Double ClosedAmount;
+            switch (Position)
+            {
+                case Entities.Trading.PositionTypeEnum.Long:
+                    Logger.Instance.LogInfo("Bitfinex Close position call margin sell");
+                    ClosedAmount = MarginSell(currency, QuoteAmount, currency);
+                    break;
+                case Entities.Trading.PositionTypeEnum.Short:
+                    Logger.Instance.LogInfo("Bitfinex Close position call margin buy");
+                    ClosedAmount = MarginBuy(currency, QuoteAmount, currency);
+                    break;
+                default:
+                    return true;
+            }
 
-			if (!Double.IsNaN(ClosedAmount))
-			{
-				Position = Entities.Trading.PositionTypeEnum.Out;
-				return true;
-			}
-			else
-				return false;
+            if (!Double.IsNaN(ClosedAmount))
+            {
+                Position = Entities.Trading.PositionTypeEnum.Out;
+                return true;
+            }
+            else
+                return false;
 
-		}
-     
+        }
+
 
         public override double GetWithDrawFees()
         {
@@ -584,14 +588,14 @@ namespace WhiteCow.Broker
                     formatedCurrency = "QSH";
                     break;
                 case "AION":
-                    formatedCurrency="AIO";
+                    formatedCurrency = "AIO";
                     break;
-				case "IOST":
-					formatedCurrency = "IOS";
-					break;
-				case "ODEM":
-					formatedCurrency = "ODE";
-					break;
+                case "IOST":
+                    formatedCurrency = "IOS";
+                    break;
+                case "ODEM":
+                    formatedCurrency = "ODE";
+                    break;
                 default:
                     formatedCurrency = Currency;
                     break;
