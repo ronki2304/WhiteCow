@@ -105,5 +105,8 @@ namespace WhiteCow.Log
             if (msgQueue.Count > 10)
                 msgQueue.Dequeue();
         }
+
+
+
     }
 }

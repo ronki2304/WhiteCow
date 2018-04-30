@@ -248,6 +248,21 @@ namespace WhiteCow.Broker
 		/// </summary>
 		/// <returns><c>true</c>, if position was closed, <c>false</c> otherwise.</returns>
 		/// <param name="currency">Currency.</param>
-		public abstract Boolean ClosePosition(String currency);		
+		public abstract Boolean ClosePosition(String currency);
+
+        /// <summary>
+        /// retrieve all open orders with the order id and the amount in the quote currency.
+        /// </summary>
+        /// <returns>list of tupple (orderid then amount)</returns>
+        /// <param name="currency">Currency.</param>
+        public abstract List<Tuple<String, Double>> GetOpenOrders(String currency);
+
+        /// <summary>
+        /// Cancels order that are not traded.
+        /// </summary>
+        /// <returns><c>true</c>, if open order was canceled, <c>false</c> otherwise.</returns>
+        /// <param name="OrderId">Order identifier.</param>
+        public abstract Boolean CancelOpenOrder(String OrderId);
+
 	}
 }

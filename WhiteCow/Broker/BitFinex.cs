@@ -291,51 +291,6 @@ namespace WhiteCow.Broker
             }
         }
 
-        public String ListOpenPositions()
-        {
-            Logger.Instance.LogInfo("Bitfinex List Open Position started");
-            const String apiPath = "/v2/auth/r/positions";
-            var nonce = DateTime.Now.getUnixTime();
-            const String body = "{}";
-            String res = PostV2(apiPath, body, nonce);
-
-            //call post failed three times then stop process
-            if (IsInError)
-            {
-                Logger.Instance.LogWarning("BitFinex List Open postion failed");
-                return String.Empty;
-            }
-            IsInError = false;
-
-            Logger.Instance.LogInfo("Bitfinex List Open Position end");
-            return res;
-
-        }
-
-       
-        public bool Account_info()
-        {
-            Logger.Instance.LogInfo("Bitfinex Account info started");
-            long nonce = DateTime.Now.getUnixTime();
-            const String apiPath = "/v1/account_infos";
-            BitfinexPostBase request = new BitfinexPostBase();
-            request.Request = apiPath;
-            request.Nonce = nonce.ToString();
-
-            Console.WriteLine(PostV1(apiPath, request));
-
-            //call post failed three times then stop process
-            if (IsInError)
-            {
-                Logger.Instance.LogWarning("BitFinex Account info has failed");
-                return false;
-            }
-            IsInError = false;
-            Logger.Instance.LogInfo("Bitfinex Account info ended");
-            return true;
-        }
-
-
         public override Double MarginBuy(String currency)
         {
             return MarginBuy(currency, BaseWallet.amount, BaseWallet.currency);
@@ -439,29 +394,7 @@ namespace WhiteCow.Broker
             return Double.NaN;
         }
 
-        public Boolean CancelOrder(Int64 orderId)
-        {
-            Logger.Instance.LogInfo("Bitfinex Cancel Order started");
-            long nonce = DateTime.Now.getUnixTime();
-            const String apiPath = "/v1/order/cancel";
 
-            var request = new BitfinexOrderStatus();
-            request.Request = apiPath;
-            request.Nonce = nonce.ToString();
-            request.OrderId = orderId;
-            try
-            {
-                PostV1(apiPath, request);
-                Logger.Instance.LogInfo("Bitfinex Cancel Order ended");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Logger.Instance.LogError("bitfinex Cancel Order Failed");
-                Logger.Instance.LogError(ex);
-                return false;
-            }
-        }
 
 
 
@@ -492,6 +425,37 @@ namespace WhiteCow.Broker
                 return false;
 
         }
+
+        public override List<Tuple<String, Double>> GetOpenOrders(String currency)
+        {
+            //nothing todo bitfinex has a function to operate at market price so it is not possile to have an open orders
+            return null;
+        }
+
+        public override Boolean CancelOpenOrder(String OrderId)
+        {
+	   
+			Logger.Instance.LogInfo("Bitfinex Cancel Order started");
+			long nonce = DateTime.Now.getUnixTime();
+			const String apiPath = "/v1/order/cancel";
+
+			var request = new BitfinexOrderStatus();
+			request.Request = apiPath;
+			request.Nonce = nonce.ToString();
+            request.OrderId = Convert.ToInt64(OrderId);
+			try
+			{
+				PostV1(apiPath, request);
+				Logger.Instance.LogInfo("Bitfinex Cancel Order ended");
+				return true;
+			}
+			catch (Exception ex)
+			{
+				Logger.Instance.LogError("bitfinex Cancel Order Failed");
+				Logger.Instance.LogError(ex);
+				return false;
+			}
+		}
         #endregion
 
 

@@ -85,6 +85,8 @@
     <Compile Include="Broker\Poloniex.cs" />
     <Compile Include="RuntimeMode\History.cs" />
     <Compile Include="Entities\Poloniex\PoloniexCloseResult.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexOpenOrder.cs" />
+    <Compile Include="Entities\Poloniex\PoloniexSuccess.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />

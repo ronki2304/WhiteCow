@@ -8,6 +8,7 @@ using WhiteCow.Log;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace WhiteCow.RuntimeMode
 {
@@ -45,9 +46,9 @@ namespace WhiteCow.RuntimeMode
 
 
 #if DEBUG
-			polo.GetOpenOrders("XRP");
-			//SetPosition(polo, btx, "XRP");
-			return;
+           // CheckMarginOperation(btx, "XRP", "Sell");
+            //SetPosition(polo, btx, "XRP");
+            return;
 #else
             while (true)
                 TickGapAnalisys(polo, btx);
@@ -143,25 +144,26 @@ namespace WhiteCow.RuntimeMode
             Double amount = Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount ? Brlow.BaseWallet.amount : BrHigh.BaseWallet.amount;
             Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
 
-         
-
             Double QuoteAmount = BrHigh.MarginSell(currency, amount, Brlow.BaseWallet.currency);
-            //control one
-            //check if the orders are passed
-            //the amount of margin postion should be the same as QuoteAmount
-            //if not then close the possible partially opened ones
-            //return
+			
 
-            if (Double.IsNaN(QuoteAmount))
-                return;
+			if (Double.IsNaN(QuoteAmount))
+				return;
+
+			//control in another thread for performance issue
+            //need to be the speedier we can
+			Task t1 = Task.Run(() => { CheckMarginOperation(BrHigh, currency, "Sell"); });
+           
+
 
             //buying the same as as we shorted earlier
             Brlow.MarginBuy(currency, QuoteAmount, currency);
 
-            //control two
-            //this time it is different we have to be sure that we are in position
-            //if not enough money in market then close open position and reopen new ones
 
+			//control two
+			//this time it is different we have to be sure that we are in position
+			//if not enough money in market then close open position and reopen new ones
+			CheckMarginOperation(Brlow, currency, "Buy");
 
             if (LogToFile)
                 LogTicks(BrHigh, Brlow, currency, "init position");
@@ -176,12 +178,47 @@ namespace WhiteCow.RuntimeMode
 #endif
 
         }
-		/// <summary>
-		/// wait for the cross or nearly the cross for closing position
-		/// </summary>
-		/// <param name="Brlow">low broker ticker, the long one</param>
-		/// <param name="BrHigh">High broker ticker, the short one</param>
-		private void CheckClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, String currency, Double amount)
+
+        /// <summary>
+        /// check if all all operations are traded to avoid endless open order
+        /// if some are found then cancel open order and replace new trade
+        /// </summary>
+        /// <param name="brok">broker where operation are done</param>
+        /// <param name="currency">Currency.</param>
+        /// <param name="state">Sell for the brHigh Buy for the brLow</param>
+        public void CheckMarginOperation(Broker.Broker brok, String currency, String state)
+        {
+            List<Tuple<String, Double>> openorders;
+			Double amount = 0.0;
+
+            do
+            {
+                Thread.Sleep(1000);
+                openorders = brok.GetOpenOrders(currency);
+
+                //cancel order
+                if (openorders != null && openorders.Count!=0)
+                {
+                    foreach (var order in openorders)
+                    {
+                        brok.CancelOpenOrder(order.Item1);
+                        amount += order.Item2;
+                    }
+                    if (state=="Sell")
+                        brok.MarginSell(currency,amount,currency);
+                    else
+                        brok.MarginBuy(currency, amount, currency);
+                }
+                amount = 0.0;
+            } while (openorders != null&& openorders.Count != 0);
+
+        }
+        /// <summary>
+        /// wait for the cross or nearly the cross for closing position
+        /// </summary>
+        /// <param name="Brlow">low broker ticker, the long one</param>
+        /// <param name="BrHigh">High broker ticker, the short one</param>
+        private void CheckClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, String currency, Double amount)
         {
 
             Logger.Instance.LogInfo("Now Waiting for the cross");
@@ -205,13 +242,11 @@ namespace WhiteCow.RuntimeMode
 
                 gap = 100.0 * (BrHigh.LastTicks[currency].Ask / Brlow.LastTicks[currency].Bid - 1.0);
                 Logger.Instance.LogInfo($"Gap is {gap}");
-                if (LogToFile)
-                    LogTicks(BrHigh, Brlow, currency, "check close");
 
             } while (gap > Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.Closegap"]));
 
             //Now close position
-            ClosePosition(Brlow, BrHigh, currency,amount);
+            ClosePosition(Brlow, BrHigh, currency, amount);
         }
 
         /// <summary>
@@ -220,42 +255,44 @@ namespace WhiteCow.RuntimeMode
         /// <param name="Brlow">Brlow.</param>
         /// <param name="BrHigh">Br high.</param>
         /// <param name="currency">Currency.</param>
-        private static void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, string currency, Double amount)
+        private void ClosePosition(Broker.Broker Brlow, Broker.Broker BrHigh, string currency, Double amount)
         {
-			Logger.Instance.LogInfo($"Now closing position");
+            Logger.Instance.LogInfo($"Now closing position");
 
-           
+            if (LogToFile)
+                LogTicks(BrHigh, Brlow, currency, "close position");
+
             while (!BrHigh.ClosePosition(currency))
-                    Thread.Sleep(1000);
-           
+                Thread.Sleep(1000);
+
             while (!Brlow.ClosePosition(currency))
-                    Thread.Sleep(1000);
-           
-            
+                Thread.Sleep(1000);
+
+
             Logger.Instance.LogInfo("position closed");
         }
 
 
-		private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow, String currency, String state)
-		{
+        private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow, String currency, String state)
+        {
 
-			String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
-			   , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
-			   , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
-			   , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
-			   , $";{BrLow.Name.ToString()}"
-			   , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
-			   , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
-			   , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
-			   , $";{state}");
+            String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
+               , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+               , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+               , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+               , $";{BrLow.Name.ToString()}"
+               , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+               , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+               , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+               , $";{state}");
 
-			File.AppendAllText(fileName, content + Environment.NewLine);
+            File.AppendAllText(fileName, content + Environment.NewLine);
 
-		}
+        }
 
-		public void Dispose()
-		{
+        public void Dispose()
+        {
 
-		}
-	}
+        }
+    }
 }

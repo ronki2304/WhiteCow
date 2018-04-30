@@ -14,6 +14,8 @@ using System.Collections.Generic;
 using WhiteCow.Log;
 using WhiteCow.Entities.Poloniex.Close;
 using System.Threading.Tasks;
+using WhiteCow.Entities.Poloniex.PoloniexOpenOrder;
+using WhiteCow.Entities.Poloniex.Success;
 
 namespace WhiteCow.Broker
 {
@@ -421,64 +423,42 @@ namespace WhiteCow.Broker
 		}
 
 		
-        public void GetMarginOrders(String currency)
-        {
-			String PostData = String.Concat("command=getMarginPosition"
-                                            , $"&currencyPair={Pair(currency)}"
-											, $"&nonce={DateTime.Now.getUnixMilliTime()}"
-											);
-            Console.WriteLine(Post(PostData));
-
-            //sample to serialize
-            //with position
-			//{ "amount":"323.82498915","total":"-0.02992499","basePrice":"0.00009241","liquidationPrice":"-0.00018471","pl":"-0.00011690","lendingFees":"0.00000000","type":"long"}
-
-            //without position
-			//{ "type":"none","amount":"0.00000000","total":"0.00000000","basePrice":"0.00000000","liquidationPrice":-1,"pl":"0.00000000","lendingFees":"0.00000000"}
-
-        }
-
-		/// <summary>
+        /// <summary>
 		/// retrieve orders that are not traded
 		/// </summary>
 		/// <param name="currency">Currency.</param>
-		public void GetOpenOrders(String currency)
+        public override List<Tuple<String,Double>> GetOpenOrders(String currency)
         {
+			Logger.Instance.LogInfo("Poloniex GetOpenOrders started");
+
 			String PostData = String.Concat("command=returnOpenOrders"
 											, $"&currencyPair={Pair(currency)}"
 											, $"&nonce={DateTime.Now.getUnixMilliTime()}"
 											);
-			Console.WriteLine(Post(PostData));
+            List<PoloniexOpenOrder> openorders=PoloniexOpenOrder.FromJson(Post(PostData));
+
+            //if no open order then null coooool :)
+            if (openorders == null)
+                return null;
+
+            //return open order :(
+            Logger.Instance.LogInfo("Poloniex GetOpenOrders ended");
+            return openorders.Select(p => new Tuple<String,Double>(p.OrderNumber, p.Amount)).ToList();
+			
+   		}
+
+        public override Boolean CancelOpenOrder(String OrderId)
+        {
+			String PostData = String.Concat("command=cancelOrder"
+                                            , $"&orderNumber={OrderId}"
+											, $"&nonce={DateTime.Now.getUnixMilliTime()}"
+											);
+
+            var success = PoloniexSuccess.FromJson(Post(PostData));
+
+            return success.SuccessSuccess == 1;
         }
-		/// <summary>
-		/// permit to transfer fund between account
-		/// </summary>
-		/// <returns><c>true</c>, if fund was transfered, <c>false</c> otherwise.</returns>
-		/// <param name="Input">Input account</param>
-		/// <param name="Output">Output account</param>
-		/// <param name="amount">Amount</param>
-		private Boolean TransferFund(PoloniexAccountType Input, PoloniexAccountType Output, Double amount)
-		{
-			String PostData = String.Concat("command=transferBalance&nonce="
-											, DateTime.Now.getUnixMilliTime()
-											, "&currency="
-											, BaseWallet.currency
-											, "&amount="
-											, amount.ToString()
-											, "&fromAccount="
-											, Input.ToString()
-											, "&toAccount="
-											, Output.ToString()
-										   );
 
-			String res =  Post(PostData);
-			if (IsInError)
-				return false;
-			RefreshWallet();
-			return true;
-		}
-
-		
 		#endregion
 
 
