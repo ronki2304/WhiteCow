@@ -46,11 +46,9 @@ namespace WhiteCow.RuntimeMode
 
 
 #if DEBUG
-         //   polo.MarginSell("XRP", 0.03, "BTC");
-            Task t1 = Task.Run(() => { CheckMarginOperation(polo, "XRP", "Sell"); });
+            TickGapAnalisys(polo, btx);
 			//SetPosition(polo, btx, "XRP");
 
-            t1.Wait();
             return;
 #else
             while (true)
@@ -76,10 +74,11 @@ namespace WhiteCow.RuntimeMode
                 Logger.Instance.LogInfo("Gap is not enough wait 10sec");
                 Thread.Sleep(10000);
 
-                Task t1 = Task.Run(() => { polo.GetTicks(); });
-                Task t2 = Task.Run(() => { btx.GetTicks(); });
+                Task t1 = Task.Run(() => { var toto =polo.LastTicks == null; });
+                Task t2 = Task.Run(() => { var toto = btx.LastTicks == null; });
 
-                Task.WaitAll();
+                t1.Wait();
+                t2.Wait();
 
                 if (polo.LastTicks == null)
                     continue;

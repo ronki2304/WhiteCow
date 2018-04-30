@@ -157,7 +157,7 @@ namespace WhiteCow.Broker
 
             return tick;
         }
-        public override Dictionary<String, Ticker> GetTicks()
+        protected override Dictionary<String, Ticker> GetTicks()
         {
             Logger.Instance.LogInfo("BitFinex Get all Ticks start");
 

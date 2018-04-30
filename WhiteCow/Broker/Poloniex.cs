@@ -114,7 +114,7 @@ namespace WhiteCow.Broker
 
 		}
 
-		public override Dictionary<String, Ticker> GetTicks()
+		protected override Dictionary<String, Ticker> GetTicks()
 		{
 			Logger.Instance.LogInfo("Poloniex Get Tick start");
 			Dictionary<String, Ticker> ret = new Dictionary<string, Ticker>();
