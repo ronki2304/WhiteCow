@@ -49,15 +49,7 @@ namespace WhiteCow.Broker
 			get
 			{
 				if (_LastTicks == null || DateTime.Now.AddSeconds(-1).getUnixMilliTime() - _LastTicks.First().Value.Timestamp >= 1000)
-				{
-                    if (_LastTicks != null)
-                    {
-                        Console.WriteLine("update" + this.Name);
-                        Console.WriteLine(DateTime.Now.AddSeconds(-1).getUnixMilliTime() - _LastTicks.First().Value.Timestamp);
-                        Console.WriteLine(DateTime.Now.AddSeconds(-1).getUnixMilliTime());
-                        Console.WriteLine(_LastTicks.First().Value.Timestamp);
-                    }
-
+				{                  
 					do
 					{
 						IsInError = false;
