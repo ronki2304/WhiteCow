@@ -79,9 +79,7 @@ namespace WhiteCow.RuntimeMode
                 Task t1 = Task.Run(() => { polo.GetTicks(); });
                 Task t2 = Task.Run(() => { btx.GetTicks(); });
 
-                t1.Wait();
-                t2.Wait();
-               
+                Task.WaitAll();
 
                 if (polo.LastTicks == null)
                     continue;
