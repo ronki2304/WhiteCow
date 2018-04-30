@@ -46,8 +46,11 @@ namespace WhiteCow.RuntimeMode
 
 
 #if DEBUG
-           // CheckMarginOperation(btx, "XRP", "Sell");
-            //SetPosition(polo, btx, "XRP");
+         //   polo.MarginSell("XRP", 0.03, "BTC");
+            Task t1 = Task.Run(() => { CheckMarginOperation(polo, "XRP", "Sell"); });
+			//SetPosition(polo, btx, "XRP");
+
+            t1.Wait();
             return;
 #else
             while (true)
@@ -76,7 +79,9 @@ namespace WhiteCow.RuntimeMode
                 Task t1 = Task.Run(() => { polo.GetTicks(); });
                 Task t2 = Task.Run(() => { btx.GetTicks(); });
 
-                Task.WaitAll();
+                t1.Wait();
+                t2.Wait();
+               
 
                 if (polo.LastTicks == null)
                     continue;
@@ -164,7 +169,7 @@ namespace WhiteCow.RuntimeMode
 			//this time it is different we have to be sure that we are in position
 			//if not enough money in market then close open position and reopen new ones
 			CheckMarginOperation(Brlow, currency, "Buy");
-
+            t1.Wait();
             if (LogToFile)
                 LogTicks(BrHigh, Brlow, currency, "init position");
 
@@ -187,13 +192,14 @@ namespace WhiteCow.RuntimeMode
         /// <param name="currency">Currency.</param>
         /// <param name="state">Sell for the brHigh Buy for the brLow</param>
         public void CheckMarginOperation(Broker.Broker brok, String currency, String state)
-        {
+        {			
             List<Tuple<String, Double>> openorders;
 			Double amount = 0.0;
 
             do
             {
                 Thread.Sleep(1000);
+               
                 openorders = brok.GetOpenOrders(currency);
 
                 //cancel order
