@@ -157,27 +157,7 @@ namespace WhiteCow.Broker
 			}
 			return PoloniexTicker.FromJson(content);
 		}
-		/// <summary>
-		/// compute the lending rate
-		/// </summary>
-		/// <returns>The average yield loan.</returns>
-		protected override double GetAverageYieldLoan()
-		{
-			Logger.Instance.LogInfo("Poloniex Average Yield started");
-			String address = _GetUrl + $"/public?command=returnLoanOrders&currency={BaseWallet.currency}";
-			var content = HttpGet(address);
-			if (IsInError)
-			{
-				Logger.Instance.LogInfo("Poloniex Average Yield end with error");
-
-				return Double.NaN;
-			}
-			var lend = PoloniexLendInfo.FromJson(content);
-			Logger.Instance.LogInfo("Poloniex Average Yield end");
-			return lend.Offers.Average(p => p.Rate);
-
-		}
-
+		
 		private PoloniexMarketOrderBook returnMarketOrderBook(Int32 depth, String currency)
 		{
 			Logger.Instance.LogInfo("Poloniex return Market Order Book start");
@@ -204,40 +184,7 @@ namespace WhiteCow.Broker
 
 		}
 
-		public override Double GetWithDrawFees()
-		{
-			if (Fees == null)
-			{
-
-				Logger.Instance.LogInfo("Poloniex Call WithDraw fees started");
-
-				String url = String.Concat(_GetUrl, "/public?command=returnCurrencies");
-
-
-				var content = HttpGet(url);
-
-				if (IsInError)
-				{
-					Logger.Instance.LogInfo("Poloniex Call WithDraw fees ended with error");
-					return Double.NaN;
-
-				}
-				var currencies = PoloniexCurrencyInfos.FromJson(content);
-
-				Fees = new Dictionary<String, Double>();
-
-				foreach (String key in currencies.Keys)
-				{
-					Fees.Add(key, currencies[key].TxFee);
-				}
-
-			}
-
-			Logger.Instance.LogInfo("Poloniex Call WithDraw fees ended");
-
-			return Fees[BaseWallet.currency];
-
-		}
+		
 		#endregion
 
 
@@ -412,15 +359,7 @@ namespace WhiteCow.Broker
 			return finalAmount;
 		}
 
-		public void GetOpenPosition(String currency)
-		{
-			Logger.Instance.LogInfo("Poloniex get open position start");
-
-			String PostData = $"command=getMarginPosition&currencyPair={Pair(currency)}&nonce=" + DateTime.Now.getUnixMilliTime();
-			string res = Post(PostData);
-			Logger.Instance.LogInfo("Poloniex get open position end");
-
-		}
+		
 		public override Boolean ClosePosition(String currency)
 		{
 			Logger.Instance.LogInfo("Poloniex get close position started");
@@ -481,22 +420,7 @@ namespace WhiteCow.Broker
 			}
 		}
 
-		public override bool Send(string DestinationAddress, double Amount)
-		{
-			Logger.Instance.LogInfo("Poloniex Send money started");
-
-			long nonce = DateTime.Now.getUnixMilliTime();
-			String PostData = String.Concat("command=withdraw"
-											, $"&currency={BaseWallet.currency}"
-											, $"&nonce={nonce}"
-											, $"&amount={Amount}"
-											, $"&address={DestinationAddress}");
-			Post(PostData);
-			Logger.Instance.LogInfo($"Poloniex {Amount} is sent");
-
-			return true;
-		}
-
+		
         public void GetMarginOrders(String currency)
         {
 			String PostData = String.Concat("command=getMarginPosition"
@@ -554,27 +478,7 @@ namespace WhiteCow.Broker
 			return true;
 		}
 
-		public override Boolean CheckReceiveFund(Double amount)
-		{
-			Logger.Instance.LogInfo("Poloniex check receive fund started");
-			Double oldAmount = ExchangeBaseWallet.amount;
-
-			while (ExchangeBaseWallet.amount == oldAmount)
-			{
-				Logger.Instance.LogInfo("funds not received for wait 3 min again");
-				//wait 3 minuts
-				Thread.Sleep(180000);
-				oldAmount = ExchangeBaseWallet.amount;
-				RefreshWallet();
-
-			}
-			Logger.Instance.LogInfo("fund received transfer them");
-			TransferFund(PoloniexAccountType.exchange, PoloniexAccountType.margin, amount);
-			Logger.Instance.LogInfo("Poloniex check receive fund ended");
-
-			return true;
-
-		}
+		
 		#endregion
 
 

@@ -312,26 +312,7 @@ namespace WhiteCow.Broker
 
         }
 
-        protected override Double GetAverageYieldLoan()
-        {
-            Logger.Instance.LogInfo("Bitfinex Get average Yield started");
-            const String apiPath = "/v2/auth/r/info/funding/";
-            var nonce = DateTime.Now.getUnixTime();
-            const String body = "{}";
-            String res = PostV2(apiPath + "f" + BaseWallet.currency, body, nonce);
-
-            //call post failed three times then stop process
-            if (IsInError)
-            {
-                Logger.Instance.LogWarning("BitFinex Get average Yield has failed");
-
-                return Double.NaN;
-            }
-            IsInError = false;
-            Logger.Instance.LogInfo("Bitfinex Get average Yield end");
-            return Convert.ToDouble(res.Split(',')[3]);
-        }
-
+       
         public bool Account_info()
         {
             Logger.Instance.LogInfo("Bitfinex Account info started");
@@ -483,34 +464,6 @@ namespace WhiteCow.Broker
         }
 
 
-        public override bool Send(string DestinationAddress, double Amount)
-        {
-            Logger.Instance.LogInfo("Bitfinex Send money started");
-            long nonce = DateTime.Now.getUnixTime();
-            const String apiPath = "/v1/withdraw";
-
-            BitFinexWithDrawal request = new BitFinexWithDrawal();
-            request.Nonce = nonce.ToString();
-            request.Request = apiPath;
-            request.WithDrawType = "bitcoin";
-            request.WalletSelected = "trading";
-            request.Amount = Amount.ToString();
-            request.Address = DestinationAddress;
-
-            String response = PostV1(apiPath, request);
-
-            //call post failed three times then stop process
-            if (IsInError)
-            {
-                Logger.Instance.LogError("Bitfinex Send money has failed");
-                return false;
-            }
-            IsInError = false;
-
-            Logger.Instance.LogInfo("Bitfinex Send money ended");
-            return true;
-
-        }
 
 
         public override Boolean ClosePosition(String currency)
@@ -539,31 +492,6 @@ namespace WhiteCow.Broker
                 return false;
 
         }
-
-
-        public override double GetWithDrawFees()
-        {
-            if (Fees == null)
-            {
-                Logger.Instance.LogInfo("BitFinex Call WithDraw fees started");
-                do
-                {
-                    long nonce = DateTime.Now.getUnixTime();
-                    const String apiPath = "/v1/account_fees";
-                    BitfinexPostBase request = new BitfinexPostBase();
-                    request.Nonce = nonce.ToString();
-                    request.Request = apiPath;
-                    String content = PostV1(apiPath, request);
-                    if (IsInError)
-                        continue;
-                    Fees = BitFinexAccountFees.FromJson(content).Withdraw;
-                    Logger.Instance.LogInfo("BitFinex Call WithDraw fees ended");
-                } while (IsInError);
-            }
-            return Fees[BaseWallet.currency];
-        }
-
-
         #endregion
 
 

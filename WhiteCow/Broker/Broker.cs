@@ -29,19 +29,13 @@ namespace WhiteCow.Broker
 
 
 
-		/// <summary>
-		/// contain all withdraw Fees
-		/// </summary>
-		protected Dictionary<String, Double> Fees;
-
 
 		/// <summary>
 		/// use to constraint call number to avoid black listing
 		/// </summary>
 		protected volatile SynchronizedCollection<DateTime> NbPostCall;
 
-		public readonly String _PublicAddress;
-
+		
 		public readonly Plateform Name;
 		#region Tick
 		/// <summary>
@@ -78,19 +72,7 @@ namespace WhiteCow.Broker
 
 		public PositionTypeEnum Position { get; protected set; }
 		public Boolean IsInError;
-		/// <summary>
-		/// return an avarage rate lend
-		/// </summary>
-		/// <value>The average yield loan.</value>
-		public Double AverageYieldLoan
-		{
-			get
-			{
-				return GetAverageYieldLoan();
-			}
-		}
-
-
+		
 		public Broker(String Platform)
 		{
 			_Key = ConfigurationManager.AppSettings[$"{Platform}.key"];
@@ -98,7 +80,6 @@ namespace WhiteCow.Broker
 			_GetUrl = ConfigurationManager.AppSettings[$"{Platform}.geturl"];
 			_PostUrl = ConfigurationManager.AppSettings[$"{Platform}.posturl"];
 
-			_PublicAddress = ConfigurationManager.AppSettings[$"{Platform}.PublicAddress"];
 			_NbCallPost = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.NbCallPost"]);
 			_CallPostMaxInterval = Convert.ToInt32(ConfigurationManager.AppSettings[$"{Platform}.PostInterval"]);
 			_MinimumSize = Convert.ToDouble(ConfigurationManager.AppSettings[$"{Platform}.MinimumSize"]);
@@ -209,15 +190,7 @@ namespace WhiteCow.Broker
 			}
 			return Response;
 		}
-
-		/// <summary>
-		/// return an avarage rate lend
-		/// </summary>
-		/// <value>The average yield loan.</value>
-		protected abstract Double GetAverageYieldLoan();
-
-
-		/// <summary>
+        /// <summary>
 		/// Gets the tick for a specific pair.
 		/// </summary>
 		/// <returns>The tick.</returns>
@@ -275,41 +248,6 @@ namespace WhiteCow.Broker
 		/// </summary>
 		/// <returns><c>true</c>, if position was closed, <c>false</c> otherwise.</returns>
 		/// <param name="currency">Currency.</param>
-		public abstract Boolean ClosePosition(String currency);
-
-		/// <summary>
-		/// Send coin to a specific address
-		/// </summary>
-		/// <returns>The send.</returns>
-		/// <param name="DestinationAddress">Destination address.</param>
-		/// <param name="Amount">Amount.</param>
-		public abstract Boolean Send(String DestinationAddress, double Amount);
-
-		/// <summary>
-		/// Gets the with draw fees for the base currency
-		/// </summary>
-		/// <returns>The with draw fees.</returns>
-		public abstract Double GetWithDrawFees();
-
-		/// <summary>
-		/// wait for the fund from antoher place
-		/// when they arrived if needed put them into margin account
-		/// </summary>
-		/// <returns><c>true</c>, if receive fund was checked, <c>false</c> otherwise.</returns>
-		public virtual Boolean CheckReceiveFund(Double amount)
-		{
-			Double oldAmount = BaseWallet.amount;
-
-			while (BaseWallet.amount == oldAmount)
-			{
-				Console.WriteLine("funds not received for wait 3 min again");
-				//wait 3 minuts
-				Thread.Sleep(180000);
-				oldAmount = BaseWallet.amount;
-				RefreshWallet();
-
-			}
-			return true;
-		}
+		public abstract Boolean ClosePosition(String currency);		
 	}
 }

@@ -43,14 +43,15 @@ namespace WhiteCow.RuntimeMode
             Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
 
-            polo.GetOpenOrders("XRP");
 
-            //SetPosition(polo, btx, "XRP");
-            return;            
-
+#if DEBUG
+			polo.GetOpenOrders("XRP");
+			//SetPosition(polo, btx, "XRP");
+			return;
+#else
             while (true)
                 TickGapAnalisys(polo, btx);
-
+#endif
         }
 
         /// <summary>
@@ -234,36 +235,6 @@ namespace WhiteCow.RuntimeMode
             Logger.Instance.LogInfo("position closed");
         }
 
-        /// <summary>
-        /// Reequilibrate all broker
-        /// </summary>
-        /// <param name="Brlow">low broker ticker, the long one</param>
-        /// <param name="BrHigh">High broker ticker, the short one</param>
-        private void EquilibrateFund(Broker.Broker Brlow, Broker.Broker BrHigh)
-		{
-			Logger.Instance.LogInfo("Now transfer extra amount to reequilibrate");
-			Step = TradingStep.FundTransfer;
-			Brlow.RefreshWallet();
-			BrHigh.RefreshWallet();
-			Double amountToTransfer;
-
-			//compute the amount to send
-			//two differents case similar treatment
-			if (Brlow.BaseWallet.amount > BrHigh.BaseWallet.amount)
-			{
-				amountToTransfer = Brlow.BaseWallet.amount - BrHigh.BaseWallet.amount - Brlow.GetWithDrawFees() / 2;
-				Brlow.Send(BrHigh._PublicAddress, amountToTransfer);
-				BrHigh.CheckReceiveFund(amountToTransfer);
-			}
-			else
-			{
-				amountToTransfer = BrHigh.BaseWallet.amount - Brlow.BaseWallet.amount - Brlow.GetWithDrawFees() / 2;
-				BrHigh.Send(Brlow._PublicAddress, amountToTransfer);
-				Brlow.CheckReceiveFund(amountToTransfer);
-			}
-			Logger.Instance.LogInfo($"full loop done {Environment.NewLine}Now go back to ticker analysis");
-
-		}
 
 		private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow, String currency, String state)
 		{
