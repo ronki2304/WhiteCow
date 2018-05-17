@@ -87,6 +87,7 @@
     <Compile Include="Entities\Poloniex\PoloniexCloseResult.cs" />
     <Compile Include="Entities\Poloniex\PoloniexOpenOrder.cs" />
     <Compile Include="Entities\Poloniex\PoloniexSuccess.cs" />
+    <Compile Include="Broker\Kraken.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Broker\" />

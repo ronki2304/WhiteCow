@@ -97,6 +97,9 @@ namespace WhiteCow.Broker
 				_Leverage = 1.0;
 			else if (_Leverage > 2.5)
 				_Leverage = 2.5;
+
+			BaseWallet = new Wallet { currency = _BaseCurrency };
+
 		}
 
 		protected string Base64Encode(string plainText)
