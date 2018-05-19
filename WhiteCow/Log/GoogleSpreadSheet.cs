@@ -102,19 +102,18 @@ namespace WhiteCow.Log
             if (Titles.First() != String.Empty)
                 Titles.Insert(0, String.Empty);
 
-			String rangeWallet = "Wallet!A:D";
+			String rangeWallet = "Wallet!A:C";
 
 			
             IList<IList<Object>> Wallet = new List<IList<Object>>();
-
-            Wallet.Add(Titles.Select(p=> (Object)p).ToList());
+             Wallet.Add(Titles.Select(p=> (Object)p).ToList());
             Wallet.Add(Value);
 
 			ValueRange vrWallet = new ValueRange();
             vrWallet.Values = Wallet;
 
 			var request = service.Spreadsheets.Values.Update(vrWallet, spreadsheetId, rangeWallet);
-			request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+            request.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
 			request.Execute();
 		}
     }

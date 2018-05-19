@@ -41,27 +41,32 @@ namespace WhiteCow.RuntimeMode
         public void StartToMooh()
         {
 
-           
+
 
 
 #if DEBUG
+            Poloniex polo = new Poloniex();
+            BitFinex btx = new BitFinex();
 
-            Logger.Instance.LogPositions("IOTA", "Cex.io", 100, 150, 50, "miaou", 900, 2000, 0, "init");
-           
-                Thread.Sleep(43200000);
-                Logger.Instance.LogPositions("IOTA", "Cex.io", 100, 150, 50, "miaou", 900, 2000, 0, "init");
-
+            Logger.Instance.UpdateWallet(new List<string>() { polo.Name.ToString(), btx.Name.ToString() },
+                                       new List<object>() { DateTime.Now, polo.BaseWallet.amount, btx.BaseWallet.amount });
+            Console.WriteLine("maiou");
+          
                 //TickGapAnalisys(polo, btx);
 			//SetPosition(polo, btx, "XRP");
 
             return;
 #else
-             Poloniex polo = new Poloniex();
+            Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
+            //first refresh spreadsheet
+            Logger.Instance.UpdateWallet(new List<string>() { polo.Name.ToString(), btx.Name.ToString() },
+                                       new List<object>() { DateTime.Now, polo.BaseWallet.amount, btx.BaseWallet.amount });
+
             while (true)
                 TickGapAnalisys(polo, btx);
 #endif
-		}
+        }
 
         /// <summary>
         /// Analyse if the gap is enough to start trading
@@ -159,27 +164,27 @@ namespace WhiteCow.RuntimeMode
             Logger.Instance.LogInfo($"amount for trading is {amount} {Brlow.BaseWallet.currency}");
 
             Double QuoteAmount = BrHigh.MarginSell(currency, amount, Brlow.BaseWallet.currency);
-			
 
-			if (Double.IsNaN(QuoteAmount))
-				return;
 
-			//control in another thread for performance issue
+            if (Double.IsNaN(QuoteAmount))
+                return;
+
+            //control in another thread for performance issue
             //need to be the speedier we can
-			Task t1 = Task.Run(() => { CheckMarginOperation(BrHigh, currency, "Sell"); });
-           
+            Task t1 = Task.Run(() => { CheckMarginOperation(BrHigh, currency, "Sell"); });
+
 
 
             //buying the same as as we shorted earlier
             Brlow.MarginBuy(currency, QuoteAmount, currency);
 
 
-			//control two
-			//this time it is different we have to be sure that we are in position
-			//if not enough money in market then close open position and reopen new ones
-			CheckMarginOperation(Brlow, currency, "Buy");
+            //control two
+            //this time it is different we have to be sure that we are in position
+            //if not enough money in market then close open position and reopen new ones
+            CheckMarginOperation(Brlow, currency, "Buy");
             t1.Wait();
-           
+
             if (LogToFile)
                 LogPositions(BrHigh, Brlow, currency, "init position");
 
@@ -189,7 +194,7 @@ namespace WhiteCow.RuntimeMode
 #if DEBUG
             ClosePosition(Brlow, BrHigh, currency, QuoteAmount);
 #else
-            CheckClosePosition(Brlow, BrHigh,currency, amount);
+            CheckClosePosition(Brlow, BrHigh, currency, amount);
 #endif
 
         }
@@ -202,31 +207,31 @@ namespace WhiteCow.RuntimeMode
         /// <param name="currency">Currency.</param>
         /// <param name="state">Sell for the brHigh Buy for the brLow</param>
         public void CheckMarginOperation(Broker.Broker brok, String currency, String state)
-        {			
+        {
             List<Tuple<String, Double>> openorders;
-			Double amount = 0.0;
+            Double amount = 0.0;
 
             do
             {
                 Thread.Sleep(1000);
-               
+
                 openorders = brok.GetOpenOrders(currency);
 
                 //cancel order
-                if (openorders != null && openorders.Count!=0)
+                if (openorders != null && openorders.Count != 0)
                 {
                     foreach (var order in openorders)
                     {
                         brok.CancelOpenOrder(order.Item1);
                         amount += order.Item2;
                     }
-                    if (state=="Sell")
-                        brok.MarginSell(currency,amount,currency);
+                    if (state == "Sell")
+                        brok.MarginSell(currency, amount, currency);
                     else
                         brok.MarginBuy(currency, amount, currency);
                 }
                 amount = 0.0;
-            } while (openorders != null&& openorders.Count != 0);
+            } while (openorders != null && openorders.Count != 0);
 
         }
         /// <summary>
@@ -313,19 +318,19 @@ namespace WhiteCow.RuntimeMode
             catch
             {
 
-				String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
-				   , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
-				   , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
-				   , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
-				   , $";{BrLow.Name.ToString()}"
-				   , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
-				   , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
-				   , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
-				   , $";{state}");
+                String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
+                   , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+                   , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+                   , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+                   , $";{BrLow.Name.ToString()}"
+                   , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+                   , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+                   , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+                   , $";{state}");
 
-				File.AppendAllText(fileName, content + Environment.NewLine);
+                File.AppendAllText(fileName, content + Environment.NewLine);
             }
-            }
+        }
 
         public void Dispose()
         {
