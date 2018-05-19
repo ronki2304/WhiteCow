@@ -41,20 +41,27 @@ namespace WhiteCow.RuntimeMode
         public void StartToMooh()
         {
 
-            Poloniex polo = new Poloniex();
-            BitFinex btx = new BitFinex();
+           
 
 
 #if DEBUG
-            TickGapAnalisys(polo, btx);
+
+            Logger.Instance.LogPositions("IOTA", "Cex.io", 100, 150, 50, "miaou", 900, 2000, 0, "init");
+           
+                Thread.Sleep(43200000);
+                Logger.Instance.LogPositions("IOTA", "Cex.io", 100, 150, 50, "miaou", 900, 2000, 0, "init");
+
+                //TickGapAnalisys(polo, btx);
 			//SetPosition(polo, btx, "XRP");
 
             return;
 #else
+             Poloniex polo = new Poloniex();
+            BitFinex btx = new BitFinex();
             while (true)
                 TickGapAnalisys(polo, btx);
 #endif
-        }
+		}
 
         /// <summary>
         /// Analyse if the gap is enough to start trading
@@ -74,7 +81,7 @@ namespace WhiteCow.RuntimeMode
                 Logger.Instance.LogInfo("Gap is not enough wait 10sec");
                 Thread.Sleep(10000);
 
-                Task t1 = Task.Run(() => { var toto =polo.LastTicks == null; });
+                Task t1 = Task.Run(() => { var toto = polo.LastTicks == null; });
                 Task t2 = Task.Run(() => { var toto = btx.LastTicks == null; });
 
                 t1.Wait();
@@ -103,6 +110,11 @@ namespace WhiteCow.RuntimeMode
 
             polo.RefreshWallet();
             btx.RefreshWallet();
+
+            //log new wallet amount
+            Logger.Instance.UpdateWallet(new List<string>() { polo.Name.ToString(), btx.Name.ToString() },
+                                         new List<object>() { DateTime.Now, polo.BaseWallet.amount, btx.BaseWallet.amount });
+
         }
 
         /// <summary>
@@ -167,8 +179,9 @@ namespace WhiteCow.RuntimeMode
 			//if not enough money in market then close open position and reopen new ones
 			CheckMarginOperation(Brlow, currency, "Buy");
             t1.Wait();
+           
             if (LogToFile)
-                LogTicks(BrHigh, Brlow, currency, "init position");
+                LogPositions(BrHigh, Brlow, currency, "init position");
 
             Logger.Instance.LogInfo("Position done");
 
@@ -263,7 +276,7 @@ namespace WhiteCow.RuntimeMode
             Logger.Instance.LogInfo($"Now closing position");
 
             if (LogToFile)
-                LogTicks(BrHigh, Brlow, currency, "close position");
+                LogPositions(BrHigh, Brlow, currency, "close position");
 
             while (!BrHigh.ClosePosition(currency))
                 Thread.Sleep(1000);
@@ -275,23 +288,44 @@ namespace WhiteCow.RuntimeMode
             Logger.Instance.LogInfo("position closed");
         }
 
-
-        private void LogTicks(Broker.Broker BrHigh, Broker.Broker BrLow, String currency, String state)
+        /// <summary>
+        /// Logs the positions in google spreadsheet
+        /// </summary>
+        /// <param name="BrHigh">Br high.</param>
+        /// <param name="BrLow">Br low.</param>
+        /// <param name="currency">Currency.</param>
+        /// <param name="state">State.</param>
+        private void LogPositions(Broker.Broker BrHigh, Broker.Broker BrLow, String currency, String state)
         {
+            try
+            {
+                Logger.Instance.LogPositions(currency
+                   , BrHigh.Name.ToString()
+                   , BrHigh.LastTicks[currency].Last
+                   , BrHigh.LastTicks[currency].Ask
+                   , BrHigh.LastTicks[currency].Bid
+                   , BrLow.Name.ToString()
+                   , BrLow.LastTicks[currency].Last
+                   , BrLow.LastTicks[currency].Ask
+                   , BrLow.LastTicks[currency].Bid
+                   , state);
+            }
+            catch
+            {
 
-            String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
-               , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
-               , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
-               , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
-               , $";{BrLow.Name.ToString()}"
-               , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
-               , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
-               , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
-               , $";{state}");
+				String content = String.Concat($"{DateTime.Now.ToString()};{currency};{BrHigh.Name.ToString()}"
+				   , $";{BrHigh.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+				   , $";{BrHigh.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+				   , $";{BrHigh.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+				   , $";{BrLow.Name.ToString()}"
+				   , $";{BrLow.LastTicks[currency].Last.ToString("F20").TrimEnd('0')}"
+				   , $";{BrLow.LastTicks[currency].Ask.ToString("F20").TrimEnd('0')}"
+				   , $";{BrLow.LastTicks[currency].Bid.ToString("F20").TrimEnd('0')}"
+				   , $";{state}");
 
-            File.AppendAllText(fileName, content + Environment.NewLine);
-
-        }
+				File.AppendAllText(fileName, content + Environment.NewLine);
+            }
+            }
 
         public void Dispose()
         {

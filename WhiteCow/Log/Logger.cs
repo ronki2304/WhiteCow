@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Collections;
+using System.Collections.Generic;
+
 namespace WhiteCow.Log
 {
     /// <summary>
@@ -11,10 +13,12 @@ namespace WhiteCow.Log
 		private static volatile Logger instance;
 		private static object syncRoot = new Object();
         private Queue msgQueue;
+        GoogleSpreadSheet gss;
 
         private Logger()
         {
             msgQueue = new Queue();
+            gss = new GoogleSpreadSheet();
         }
 
         public static Logger Instance
@@ -108,5 +112,21 @@ namespace WhiteCow.Log
 
 
 
-    }
+		//--------------///
+		//   GOOGLE     /// 
+		//--------------///
+		public void LogPositions(String currency, String BrHighName, Double BrHighLast
+								   , Double BrHighAsk, Double BrHighBid, String BrLowName
+								   , Double BrLowLast, Double BrLowAsk, Double BrLowBid, String state)
+        {
+            gss.AddNewPosition(currency,BrHighName,BrHighLast,BrHighAsk
+                               ,BrHighBid,BrLowName,BrLowLast,BrLowAsk,BrLowBid,state);
+        }
+
+        public void UpdateWallet(List<String> Titles, List<Object> Value)
+        {
+            gss.UpdateWalletData(Titles,Value);
+        }
+
+	}
 }
