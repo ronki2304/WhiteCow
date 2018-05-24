@@ -26,7 +26,7 @@ namespace WhiteCow.RuntimeMode
         public Trading()
         {
             ThresholdGap = Convert.ToDouble(ConfigurationManager.AppSettings["Runtime.ThresholdGap"]);
-            LogToFile = Convert.ToBoolean(ConfigurationManager.AppSettings["Runtime.LogTicks"]);
+            LogToFile = Convert.ToBoolean(ConfigurationManager.AppSettings["Runtime.LogPositions"]);
 
             if (LogToFile)
             {
@@ -48,12 +48,10 @@ namespace WhiteCow.RuntimeMode
             Poloniex polo = new Poloniex();
             BitFinex btx = new BitFinex();
 
-            Logger.Instance.UpdateWallet(new List<string>() { polo.Name.ToString(), btx.Name.ToString() },
-                                       new List<object>() { DateTime.Now, polo.BaseWallet.amount, btx.BaseWallet.amount });
-            Console.WriteLine("maiou");
+
           
                 //TickGapAnalisys(polo, btx);
-			//SetPosition(polo, btx, "XRP");
+			SetPosition(polo, btx, "XRP");
 
             return;
 #else
