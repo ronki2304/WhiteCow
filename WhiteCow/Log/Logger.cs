@@ -2,6 +2,7 @@
 using System.IO;
 using System.Collections;
 using System.Collections.Generic;
+using System.Configuration;
 
 namespace WhiteCow.Log
 {
@@ -87,7 +88,9 @@ namespace WhiteCow.Log
             Console.WriteLine(Message);
             addElement(Message);
 			Console.ForegroundColor = ConsoleColor.White;
-  //          LogToFile(Message);
+
+            if (Convert.ToBoolean(ConfigurationManager.AppSettings["Log.ToFile"]))
+                LogToFile(Message);
         }
 
         public void LogInfo(String Message)
@@ -95,7 +98,8 @@ namespace WhiteCow.Log
             Message = String.Concat(DateTime.Now, " Info ", Message);
 			Console.WriteLine(Message); 
             addElement(Message);
-//            LogToFile(Message); 
+            if (Convert.ToBoolean(ConfigurationManager.AppSettings["Log.ToFile"]))
+                LogToFile(Message);
 
 		}
 
